@@ -12,6 +12,7 @@ A Flask-based web interface for chatting with local LLM models. No external API 
 
 - 🚀 **Easy Setup**: Simple Flask-based web interface
 - 🔒 **100% Local**: No external API keys or internet required
+- 🌐 **Network Access**: Available across your local network to any device
 - 🎨 **Modern UI**: Clean, responsive chat interface
 - 🌡️ **Temperature Control**: Adjust creativity vs. precision
 - 💾 **Save Conversations**: Export chats to JSON files
@@ -21,10 +22,60 @@ A Flask-based web interface for chatting with local LLM models. No external API 
 - 💬 **Conversation History**: Maintains context throughout the chat
 - 🎯 **System Prompts**: Customize AI behavior
 - 📱 **Responsive Design**: Works on desktop and mobile
+- 🔄 **Background Mode**: Runs in background, survives terminal closure
+- 🔌 **Shutdown Button**: Gracefully stop the server from the web interface
 
 ---
 
 ## 🚀 Quick Start
+
+### Automated Installation (Recommended)
+
+We provide automated installation scripts for all platforms:
+
+**Linux:**
+```bash
+git clone https://github.com/yourusername/LocalLLMChat.git
+cd LocalLLMChat
+chmod +x install-linux.sh
+./install-linux.sh
+```
+
+**macOS:**
+```bash
+git clone https://github.com/yourusername/LocalLLMChat.git
+cd LocalLLMChat
+chmod +x install-macos.sh
+./install-macos.sh
+```
+
+**Windows (PowerShell):**
+```powershell
+git clone https://github.com/yourusername/LocalLLMChat.git
+cd LocalLLMChat
+powershell -ExecutionPolicy Bypass -File install-windows.ps1
+```
+
+**Chromebook (Linux Beta):**
+```bash
+git clone https://github.com/yourusername/LocalLLMChat.git
+cd LocalLLMChat
+chmod +x install-chromebook.sh
+./install-chromebook.sh
+```
+
+The installation scripts will:
+- ✅ Check for Python 3.8+
+- ✅ Install Ollama (optional)
+- ✅ Download dolphin-mistral model (optional)
+- ✅ Install LocalLLMChat and all dependencies
+- ✅ Provide clear instructions to run
+
+---
+
+### Manual Installation
+
+If you prefer to install manually:
 
 ### 1. Install a Local LLM Service
 
@@ -34,7 +85,7 @@ Choose one:
 ```bash
 # Linux/Mac
 curl -fsSL https://ollama.com/install.sh | sh
-ollama run llama3.2
+ollama run dolphin-mistral
 
 # Windows
 # Download from https://ollama.com/download
@@ -63,16 +114,41 @@ pip install -r requirements.txt
 ### 3. Run the Application
 
 ```bash
-# Start the web interface
+# Start the web interface (runs in background by default)
 local-llm-chat
+
+# Run in foreground mode
+local-llm-chat --foreground
+
+# Run in debug mode
+local-llm-chat --debug
+
+# Custom host and port
+local-llm-chat --host 0.0.0.0 --port 8080
 
 # Or run directly
 python -m local_llm_chat.app
 ```
 
-### 4. Open Your Browser
+**Running Modes:**
+- **Background** (default): Server continues running after terminal closes
+- **Foreground** (`--foreground`): Server runs in terminal, stops when you close it
+- **Debug** (`--debug`): Development mode with auto-reload and detailed logging
 
+### 4. Access the Application
+
+**On this device:**
 Navigate to: **http://localhost:5000**
+
+**From other devices on your network:**
+1. The startup message will display your network IP (e.g., `http://192.168.1.100:5000`)
+2. Open a browser on any device connected to the same network
+3. Navigate to the displayed network URL
+4. If connection fails, check firewall settings on the host device
+
+**Stopping the server:**
+- **Background mode**: Click the "Shutdown Server" button in the web interface
+- **Foreground mode**: Press `Ctrl+C` in the terminal
 
 ---
 

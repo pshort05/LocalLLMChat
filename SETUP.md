@@ -14,6 +14,16 @@ This guide provides comprehensive instructions for setting up local LLM services
 
 ## Linux
 
+### Important Note: Python Package Management (PEP 668)
+
+Modern Linux distributions (Ubuntu 23.04+, Debian 12+, Fedora 38+, etc.) use externally-managed Python environments to prevent conflicts with system packages. Our installation script handles this automatically by offering three installation methods:
+
+1. **Virtual environment** (recommended) - Isolated, no conflicts
+2. **pipx** - Installs as standalone application
+3. **User install** - Only on older systems without PEP 668
+
+If you encounter `externally-managed-environment` errors, simply run our installation script which will guide you through the best option for your system.
+
 ### Option 1: Ollama (Recommended)
 
 Ollama is the easiest way to run local LLMs on Linux.
@@ -83,6 +93,34 @@ sudo snap install lmstudio
 5. Start chatting!
 
 ### Troubleshooting Linux
+
+**Python externally-managed-environment error:**
+```bash
+# This is normal on modern Linux distributions
+# Solution 1: Use our install script (automatically handles this)
+./install-linux.sh
+
+# Solution 2: Create virtual environment manually
+python3 -m venv venv
+source venv/bin/activate
+pip install -e .
+
+# Solution 3: Use pipx (for standalone installation)
+sudo apt install pipx  # or dnf/pacman
+pipx install -e .
+```
+
+**python3-venv not found:**
+```bash
+# Ubuntu/Debian
+sudo apt install python3-venv python3-full
+
+# Fedora
+sudo dnf install python3-virtualenv
+
+# Arch
+sudo pacman -S python-virtualenv
+```
 
 **Ollama service not starting:**
 ```bash
