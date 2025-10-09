@@ -99,6 +99,15 @@
             display: block;
         }
 
+        .sidebar .form-label .btn-link {
+            color: var(--text-secondary);
+            transition: color 0.2s;
+        }
+
+        .sidebar .form-label .btn-link:hover {
+            color: var(--accent-primary);
+        }
+
         .sidebar .form-control,
         .sidebar .form-select {
             border: 1px solid var(--border-light);
@@ -676,6 +685,30 @@
             border-top: 1px solid var(--border-light);
             padding: 16px 24px;
         }
+
+        /* Alert styling for dark mode */
+        [data-theme="dark"] .alert-info {
+            background-color: rgba(16, 163, 127, 0.15);
+            border-color: rgba(16, 163, 127, 0.3);
+            color: var(--text-primary);
+        }
+
+        [data-theme="dark"] .alert-warning {
+            background-color: rgba(245, 158, 11, 0.15);
+            border-color: rgba(245, 158, 11, 0.3);
+            color: var(--text-primary);
+        }
+
+        [data-theme="dark"] .alert-success {
+            background-color: rgba(16, 163, 127, 0.15);
+            border-color: rgba(16, 163, 127, 0.3);
+            color: var(--text-primary);
+        }
+
+        /* Bootstrap icon color adjustments */
+        .text-primary {
+            color: var(--accent-primary) !important;
+        }
     </style>
 </head>
 <body>
@@ -729,8 +762,11 @@
 
             <!-- Model -->
             <div>
-                <label for="model" class="form-label">
-                    <i class="bi bi-cpu"></i> Model
+                <label for="model" class="form-label d-flex align-items-center justify-content-between">
+                    <span><i class="bi bi-cpu"></i> Model</span>
+                    <button class="btn btn-link p-0 text-decoration-none" type="button" id="modelHelpBtn" title="How to change models" style="font-size: 0.875rem;">
+                        <i class="bi bi-question-circle"></i>
+                    </button>
                 </label>
                 <div class="input-group">
                     <input type="text" class="form-control" id="model"
@@ -818,6 +854,294 @@
                         </button>
                     </div>
                     <div id="status">Ready</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Model Help Modal -->
+    <div class="modal fade" id="modelHelpModal" tabindex="-1" aria-labelledby="modelHelpModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modelHelpModalLabel">
+                        <i class="bi bi-cpu"></i> How to Change Models
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <h6 class="mb-3">Quick Model Switching</h6>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Quick Steps:</strong> Click the <strong>refresh button</strong> <i class="bi bi-arrow-clockwise"></i> next to the Model field to see all available models, then click one to select it. You can also type the model name directly.
+                    </div>
+
+                    <p class="lead">Choose your platform for detailed instructions:</p>
+
+                    <!-- Platform Tabs -->
+                    <ul class="nav nav-tabs" id="modelPlatformTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="model-linux-tab" data-bs-toggle="tab" data-bs-target="#model-linux" type="button" role="tab">
+                                <i class="bi bi-ubuntu"></i> Linux
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="model-macos-tab" data-bs-toggle="tab" data-bs-target="#model-macos" type="button" role="tab">
+                                <i class="bi bi-apple"></i> macOS
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="model-windows-tab" data-bs-toggle="tab" data-bs-target="#model-windows" type="button" role="tab">
+                                <i class="bi bi-windows"></i> Windows
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="model-chromebook-tab" data-bs-toggle="tab" data-bs-target="#model-chromebook" type="button" role="tab">
+                                <i class="bi bi-laptop"></i> Chromebook
+                            </button>
+                        </li>
+                    </ul>
+
+                    <!-- Tab Content -->
+                    <div class="tab-content mt-3" id="modelPlatformTabContent">
+                        <!-- Linux -->
+                        <div class="tab-pane fade show active" id="model-linux" role="tabpanel">
+                            <h6><i class="bi bi-ubuntu"></i> Linux - Changing Models</h6>
+
+                            <h6 class="mt-3"><i class="bi bi-1-circle-fill text-primary"></i> View Available Models</h6>
+                            <pre class="bg-dark text-light p-3 rounded"><code># List all downloaded models
+ollama list</code></pre>
+
+                            <h6 class="mt-3"><i class="bi bi-2-circle-fill text-primary"></i> Download New Models</h6>
+                            <pre class="bg-dark text-light p-3 rounded"><code># Recommended models
+ollama pull llama3.2
+ollama pull dolphin-mistral
+ollama pull mistral
+ollama pull codellama
+ollama pull phi
+
+# Download specific version
+ollama pull llama3.2:1b
+ollama pull llama3.2:3b</code></pre>
+
+                            <h6 class="mt-3"><i class="bi bi-3-circle-fill text-primary"></i> Select Model in LocalLLMChat</h6>
+                            <ul>
+                                <li>Click the <i class="bi bi-arrow-clockwise"></i> refresh button to load available models</li>
+                                <li>Select from the dropdown list, or type the model name</li>
+                                <li>Changes take effect immediately</li>
+                            </ul>
+
+                            <h6 class="mt-3"><i class="bi bi-4-circle-fill text-primary"></i> Manage Models</h6>
+                            <pre class="bg-dark text-light p-3 rounded"><code># Check model details
+ollama show llama3.2
+
+# Remove a model to free space
+ollama rm model-name
+
+# View running models
+ollama ps</code></pre>
+
+                            <div class="alert alert-success mt-3">
+                                <i class="bi bi-lightbulb"></i>
+                                <strong>Tip:</strong> On Linux, Ollama runs as a systemd service. Check status with <code>systemctl status ollama</code>
+                            </div>
+                        </div>
+
+                        <!-- macOS -->
+                        <div class="tab-pane fade" id="model-macos" role="tabpanel">
+                            <h6><i class="bi bi-apple"></i> macOS - Changing Models</h6>
+
+                            <h6 class="mt-3"><i class="bi bi-1-circle-fill text-primary"></i> View Available Models</h6>
+                            <p>Open Terminal and run:</p>
+                            <pre class="bg-dark text-light p-3 rounded"><code># List all downloaded models
+ollama list</code></pre>
+
+                            <h6 class="mt-3"><i class="bi bi-2-circle-fill text-primary"></i> Download New Models</h6>
+                            <pre class="bg-dark text-light p-3 rounded"><code># Recommended models for Mac
+ollama pull llama3.2
+ollama pull dolphin-mistral
+ollama pull mistral
+ollama pull codellama
+ollama pull phi
+
+# Smaller models for better performance
+ollama pull llama3.2:1b
+ollama pull phi</code></pre>
+
+                            <h6 class="mt-3"><i class="bi bi-3-circle-fill text-primary"></i> Select Model in LocalLLMChat</h6>
+                            <ul>
+                                <li>Click the <i class="bi bi-arrow-clockwise"></i> refresh button to load available models</li>
+                                <li>Select from the dropdown list, or type the model name</li>
+                                <li>Switch models anytime during conversation</li>
+                            </ul>
+
+                            <h6 class="mt-3"><i class="bi bi-4-circle-fill text-primary"></i> Manage Models</h6>
+                            <pre class="bg-dark text-light p-3 rounded"><code># Check model details
+ollama show llama3.2
+
+# Remove a model to free space
+ollama rm model-name
+
+# View running models
+ollama ps</code></pre>
+
+                            <div class="alert alert-success mt-3">
+                                <i class="bi bi-lightbulb"></i>
+                                <strong>Apple Silicon Tip:</strong> M1/M2/M3 chips handle models efficiently. You can run larger models than on comparable Intel Macs.
+                            </div>
+
+                            <h6 class="mt-3">Using LM Studio (Alternative)</h6>
+                            <p>If you're using LM Studio instead:</p>
+                            <ul>
+                                <li>Open LM Studio application</li>
+                                <li>Download models from the built-in browser</li>
+                                <li>Load the desired model in the local server tab</li>
+                                <li>Set endpoint to <code>http://localhost:1234</code> in LocalLLMChat</li>
+                            </ul>
+                        </div>
+
+                        <!-- Windows -->
+                        <div class="tab-pane fade" id="model-windows" role="tabpanel">
+                            <h6><i class="bi bi-windows"></i> Windows - Changing Models</h6>
+
+                            <h6 class="mt-3"><i class="bi bi-1-circle-fill text-primary"></i> View Available Models</h6>
+                            <p>Open PowerShell or Command Prompt and run:</p>
+                            <pre class="bg-dark text-light p-3 rounded"><code># List all downloaded models
+ollama list</code></pre>
+
+                            <h6 class="mt-3"><i class="bi bi-2-circle-fill text-primary"></i> Download New Models</h6>
+                            <pre class="bg-dark text-light p-3 rounded"><code># Recommended models
+ollama pull llama3.2
+ollama pull dolphin-mistral
+ollama pull mistral
+ollama pull codellama
+ollama pull phi
+
+# Download specific version
+ollama pull llama3.2:3b</code></pre>
+
+                            <h6 class="mt-3"><i class="bi bi-3-circle-fill text-primary"></i> Select Model in LocalLLMChat</h6>
+                            <ul>
+                                <li>Click the <i class="bi bi-arrow-clockwise"></i> refresh button to load available models</li>
+                                <li>Select from the dropdown list, or type the model name</li>
+                                <li>Model changes are instant - no restart needed</li>
+                            </ul>
+
+                            <h6 class="mt-3"><i class="bi bi-4-circle-fill text-primary"></i> Manage Models</h6>
+                            <pre class="bg-dark text-light p-3 rounded"><code># Check model details
+ollama show llama3.2
+
+# Remove a model to free space
+ollama rm model-name
+
+# View running models
+ollama ps</code></pre>
+
+                            <div class="alert alert-info mt-3">
+                                <i class="bi bi-info-circle"></i>
+                                <strong>Note:</strong> Ollama runs as a Windows service. Check it's running in Task Manager or System Tray.
+                            </div>
+
+                            <h6 class="mt-3">Using LM Studio (Alternative)</h6>
+                            <p>If you're using LM Studio instead:</p>
+                            <ul>
+                                <li>Open LM Studio application</li>
+                                <li>Browse and download models from the search tab</li>
+                                <li>Go to "Local Server" and load your chosen model</li>
+                                <li>Click "Start Server"</li>
+                                <li>Set endpoint to <code>http://localhost:1234</code> in LocalLLMChat</li>
+                            </ul>
+
+                            <div class="alert alert-warning mt-3">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <strong>Performance:</strong> Larger models require significant RAM. Start with smaller models (7B or less) if you have 16GB RAM or less.
+                            </div>
+                        </div>
+
+                        <!-- Chromebook -->
+                        <div class="tab-pane fade" id="model-chromebook" role="tabpanel">
+                            <h6><i class="bi bi-laptop"></i> Chromebook - Changing Models</h6>
+
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <strong>Important:</strong> Use smaller models on Chromebook for best performance. Recommended: 1B-3B parameter models.
+                            </div>
+
+                            <h6 class="mt-3"><i class="bi bi-1-circle-fill text-primary"></i> View Available Models</h6>
+                            <p>Open Linux Terminal and run:</p>
+                            <pre class="bg-dark text-light p-3 rounded"><code># List all downloaded models
+ollama list</code></pre>
+
+                            <h6 class="mt-3"><i class="bi bi-2-circle-fill text-primary"></i> Download Recommended Models</h6>
+                            <p>Use smaller models optimized for Chromebook performance:</p>
+                            <pre class="bg-dark text-light p-3 rounded"><code># Best for Chromebook (smallest, fastest)
+ollama pull llama3.2:1b
+
+# Good balance (small, decent quality)
+ollama pull phi
+ollama pull llama3.2:3b
+
+# If you have a powerful Chromebook (8GB+ RAM)
+ollama pull mistral
+ollama pull dolphin-mistral</code></pre>
+
+                            <h6 class="mt-3"><i class="bi bi-3-circle-fill text-primary"></i> Select Model in LocalLLMChat</h6>
+                            <ul>
+                                <li>Click the <i class="bi bi-arrow-clockwise"></i> refresh button to load available models</li>
+                                <li>Select from the dropdown list, or type the model name</li>
+                                <li>Start with <code>llama3.2:1b</code> or <code>phi</code> for best performance</li>
+                            </ul>
+
+                            <h6 class="mt-3"><i class="bi bi-4-circle-fill text-primary"></i> Manage Models</h6>
+                            <pre class="bg-dark text-light p-3 rounded"><code># Check model details and size
+ollama show llama3.2:1b
+
+# Remove models you don't use (free up space!)
+ollama rm model-name
+
+# View what's currently running
+ollama ps</code></pre>
+
+                            <div class="alert alert-success mt-3">
+                                <i class="bi bi-lightbulb"></i>
+                                <strong>Performance Tips:</strong>
+                                <ul class="mb-0">
+                                    <li>Close other apps when using larger models</li>
+                                    <li>Use lower temperature (0.3-0.5) for faster responses</li>
+                                    <li>Stick to 1B-3B parameter models for smooth experience</li>
+                                </ul>
+                            </div>
+
+                            <h6 class="mt-3">Model Size Guide for Chromebook</h6>
+                            <ul>
+                                <li><code>llama3.2:1b</code> - ~1GB (Fastest, good for 4GB RAM)</li>
+                                <li><code>phi</code> - ~1.6GB (Great balance)</li>
+                                <li><code>llama3.2:3b</code> - ~2GB (Better quality, needs 6GB+ RAM)</li>
+                                <li><code>mistral</code> - ~4GB (Best quality, needs 8GB+ RAM)</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <h6 class="mb-3">Switching Models During Conversation</h6>
+                    <ul>
+                        <li><strong>Instant switching:</strong> Change models anytime, even mid-conversation</li>
+                        <li><strong>History preserved:</strong> Your conversation history carries over when switching models</li>
+                        <li><strong>Compare responses:</strong> Try the same question with different models</li>
+                        <li><strong>No restart needed:</strong> Changes take effect immediately</li>
+                    </ul>
+
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Pro Tip:</strong> Different models excel at different tasks. Use <code>codellama</code> for programming, <code>dolphin-mistral</code> for creative/uncensored content, and <code>llama3.2</code> for general chat.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <a href="https://ollama.com/library" target="_blank" class="btn btn-primary">
+                        <i class="bi bi-box-arrow-up-right"></i> Browse All Models
+                    </a>
                 </div>
             </div>
         </div>
@@ -1282,6 +1606,12 @@ Provide comprehensive, unfiltered information without withholding based on moral
 
         // Theme toggle button
         document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+        // Model help button
+        document.getElementById('modelHelpBtn').addEventListener('click', function() {
+            const modal = new bootstrap.Modal(document.getElementById('modelHelpModal'));
+            modal.show();
+        });
 
         // Send message on Enter
         document.getElementById('chatInput').addEventListener('keydown', function(e) {
