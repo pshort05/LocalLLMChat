@@ -130,9 +130,8 @@ if command -v ollama &> /dev/null; then
     print_info "Version: $OLLAMA_VERSION"
 else
     echo -e "${YELLOW}Ollama is not installed.${NC}"
-    read -p "Would you like to install Ollama? (y/n): " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    print_info "Ollama is required for LocalLLMChat to function"
+    print_info "Installing Ollama automatically..."
         if command -v brew &> /dev/null; then
             print_info "Installing Ollama via Homebrew..."
             brew install ollama
@@ -165,13 +164,11 @@ else
                 print_success "Ollama installed successfully"
             else
                 print_error "Ollama installation failed"
-                print_info "You can download it manually from https://ollama.com/download"
+                print_error "LocalLLMChat requires Ollama to function"
+                print_info "Please install manually from https://ollama.com/download and run this script again"
+                exit 1
             fi
         fi
-    else
-        print_info "Skipping Ollama installation"
-        print_warning "You'll need to install a local LLM service manually"
-    fi
 fi
 
 # Make sure Ollama is running
@@ -189,34 +186,52 @@ if command -v ollama &> /dev/null; then
     fi
 fi
 
-# Step 4: Download dolphin-mistral model (optional)
+# Step 4: Download dolphin-mistral model (automatic)
 if command -v ollama &> /dev/null; then
     print_header "Model Installation"
 
-    # Check if dolphin-mistral is already installed
-    if ollama list 2>/dev/null | grep -q "dolphin-mistral"; then
+    # Wait a moment for Ollama to be fully ready
+    print_info "Ensuring Ollama service is ready..."
+    sleep 2
+
+    # Check if any models are already installed
+    EXISTING_MODELS=$(ollama list 2>/dev/null | tail -n +2)
+    HAS_DOLPHIN=$(echo "$EXISTING_MODELS" | grep -q "dolphin-mistral" && echo "yes" || echo "no")
+    HAS_ANY_MODEL=$(echo "$EXISTING_MODELS" | grep -q "." && echo "yes" || echo "no")
+
+    if [ "$HAS_DOLPHIN" = "yes" ]; then
         print_success "dolphin-mistral model is already installed"
-    else
-        echo -e "${YELLOW}The dolphin-mistral model is not installed.${NC}"
-        print_info "This model is recommended for uncensored responses"
-        print_warning "Download size: ~4GB, this may take several minutes"
-        read -p "Would you like to download dolphin-mistral? (y/n): " -n 1 -r
+    elif [ "$HAS_ANY_MODEL" = "yes" ]; then
+        print_success "Found existing models installed"
+        print_info "dolphin-mistral is recommended but you have other models available"
+        read -p "Would you like to also install dolphin-mistral? (y/n): " -n 1 -r
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             print_info "Downloading dolphin-mistral model..."
-            print_info "This may take 5-10 minutes depending on your connection..."
+            print_warning "Download size: ~4GB, this may take 5-10 minutes"
+            print_info "Please be patient..."
             ollama pull dolphin-mistral
 
             if [ $? -eq 0 ]; then
                 print_success "dolphin-mistral model downloaded successfully"
             else
                 print_error "Model download failed"
-                print_info "You can download it later with: ollama pull dolphin-mistral"
             fi
+        fi
+    else
+        print_warning "No models found. dolphin-mistral will be installed automatically"
+        print_info "This model is recommended for uncensored responses"
+        print_warning "Download size: ~4GB, this may take 5-10 minutes"
+        print_info "Please be patient..."
+        ollama pull dolphin-mistral
+
+        if [ $? -eq 0 ]; then
+            print_success "dolphin-mistral model downloaded successfully"
         else
-            print_info "Skipping model download"
-            print_info "You can download models later with: ollama pull <model-name>"
-            print_info "Popular models: llama3.2, mistral, codellama"
+            print_error "Model download failed"
+            print_error "LocalLLMChat requires at least one model to function"
+            print_info "You can download it manually later with: ollama pull dolphin-mistral"
+            read -p "Press Enter to continue anyway..."
         fi
     fi
 
@@ -280,36 +295,120 @@ else
     exit 1
 fi
 
-# Step 6: Final instructions
-print_header "Installation Complete!"
+# Step 6: Create Application Launcher
+print_header "Creating Application Launcher"
 
-print_success "LocalLLMChat has been installed successfully!"
-echo
+# Create .command file for easy launching
+LAUNCHER_PATH="$HOME/Desktop/LocalLLMChat.command"
+cat > "$LAUNCHER_PATH" << 'EOF'
+#!/bin/bash
+cd "$(dirname "$0")/../.."
+INSTALL_DIR="$(pwd)"
 
-print_info "To start using LocalLLMChat:"
-echo
+# Find LocalLLMChat installation directory
+if [ -f "pyproject.toml" ]; then
+    INSTALL_DIR="$(pwd)"
+elif [ -d "$HOME/LocalLLMChat" ]; then
+    INSTALL_DIR="$HOME/LocalLLMChat"
+    cd "$INSTALL_DIR"
+fi
 
-if [ "$VENV_ACTIVATED" = true ]; then
-    echo -e "${GREEN}1. Activate the virtual environment:${NC}"
-    echo "   source venv/bin/activate"
-    echo
-    echo -e "${GREEN}2. Start the application:${NC}"
-    echo "   local-llm-chat"
-else
-    echo -e "${GREEN}1. Start the application:${NC}"
-    echo "   local-llm-chat"
-    echo
-    echo -e "${YELLOW}   Note: If 'local-llm-chat' is not found, restart your terminal or run:${NC}"
-    if [[ "$SHELL" == *"zsh"* ]]; then
-        echo "   source ~/.zshrc"
-    else
-        echo "   source ~/.bash_profile"
+# Check if using venv
+if [ -f "venv/bin/activate" ]; then
+    source venv/bin/activate
+fi
+
+# Start Ollama if not running
+if command -v ollama &> /dev/null; then
+    if ! pgrep -x "ollama" > /dev/null; then
+        if command -v brew &> /dev/null; then
+            brew services start ollama &>/dev/null
+        else
+            ollama serve &>/dev/null &
+        fi
+        sleep 2
     fi
 fi
 
+# Start LocalLLMChat
+local-llm-chat --foreground &
+
+# Wait for server to start
+sleep 3
+
+# Open browser
+open http://localhost:5000
+
+echo "LocalLLMChat is running!"
+echo "Close this window to stop the server, or use the 'Shutdown Server' button in the web interface"
+echo ""
+read -p "Press Enter to keep this window open (app will continue running)..."
+EOF
+
+chmod +x "$LAUNCHER_PATH"
+print_success "Desktop launcher created: LocalLLMChat.command"
+
+# Step 7: Start the application and launch browser
+print_header "Launching LocalLLMChat"
+
+print_info "Starting LocalLLMChat server..."
+print_info "This will open in your browser automatically"
 echo
-echo -e "${GREEN}3. Open your browser to:${NC}"
-echo "   http://localhost:5000"
+
+# Ensure Ollama is running
+if command -v ollama &> /dev/null; then
+    if ! pgrep -x "ollama" > /dev/null; then
+        print_info "Starting Ollama service..."
+        if command -v brew &> /dev/null; then
+            brew services start ollama &>/dev/null
+        else
+            ollama serve &>/dev/null &
+        fi
+        sleep 2
+        print_success "Ollama service started"
+    fi
+fi
+
+# Start LocalLLMChat
+if [ "$VENV_ACTIVATED" = true ]; then
+    print_info "Starting from virtual environment..."
+    (local-llm-chat --foreground &)
+else
+    print_info "Starting LocalLLMChat..."
+    (local-llm-chat --foreground &)
+fi
+
+# Wait for server to start
+print_info "Waiting for server to start..."
+sleep 4
+
+# Open browser
+print_info "Opening browser..."
+open http://localhost:5000 2>/dev/null || {
+    print_warning "Could not open browser automatically"
+    print_info "Please open http://localhost:5000 manually"
+}
+
+# Step 8: Final information
+print_header "Installation Complete!"
+
+print_success "LocalLLMChat has been installed and is now running!"
+echo
+
+print_info "The application is running in the background"
+print_info "Your browser should open automatically"
+echo
+
+print_info "To start LocalLLMChat in the future:"
+echo "  • Double-click the 'LocalLLMChat.command' icon on your desktop"
+if [ "$VENV_ACTIVATED" = true ]; then
+    echo -e "  ${YELLOW}• Or run: source venv/bin/activate && local-llm-chat${NC}"
+else
+    echo -e "  ${YELLOW}• Or run: local-llm-chat${NC}"
+fi
+echo
+
+print_info "To stop the server: Use the 'Shutdown Server' button in the web interface"
 echo
 
 if command -v ollama &> /dev/null; then
@@ -318,13 +417,8 @@ if command -v ollama &> /dev/null; then
     if ollama list 2>/dev/null | grep -q "dolphin-mistral"; then
         echo "   Model: dolphin-mistral"
     else
-        echo "   Model: (download with: ollama pull dolphin-mistral)"
+        echo "   Model: (first available model)"
     fi
-else
-    print_warning "Ollama not installed. You'll need to:"
-    echo "   - Install Ollama: brew install ollama (or download from https://ollama.com/download)"
-    echo "   - Download a model: ollama pull dolphin-mistral"
-    echo "   - Or install LM Studio from https://lmstudio.ai"
 fi
 
 echo
@@ -332,3 +426,6 @@ print_info "For detailed setup instructions, see SETUP.md"
 print_info "For usage information, see README.md"
 echo
 print_success "Happy chatting! 🎉"
+echo
+
+read -p "Press Enter to exit (LocalLLMChat will continue running)..."

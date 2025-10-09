@@ -147,9 +147,8 @@ elseif (Get-Command ollama -ErrorAction SilentlyContinue) {
 
 if (-not $ollamaInstalled) {
     Write-Warning-Custom "Ollama is not installed."
-    $response = Read-Host "Would you like to download and install Ollama? (y/n)"
-
-    if ($response -eq 'y' -or $response -eq 'Y') {
+    Write-Info "Ollama is required for LocalLLMChat to function"
+    Write-Info "Installing Ollama automatically..."
         Write-Info "Downloading Ollama installer..."
 
         $installerPath = "$env:TEMP\OllamaSetup.exe"
@@ -188,39 +187,42 @@ if (-not $ollamaInstalled) {
         }
         catch {
             Write-ErrorMsg "Failed to download or install Ollama: $_"
-            Write-Info "You can install it manually from https://ollama.com/download"
+            Write-ErrorMsg "LocalLLMChat requires Ollama to function"
+            Write-Info "Please install manually from https://ollama.com/download and run this script again"
+            Read-Host "Press Enter to exit"
+            exit 1
         }
-    }
-    else {
-        Write-Info "Skipping Ollama installation"
-        Write-Warning-Custom "You'll need to install a local LLM service manually"
-    }
 }
 
-# Step 3: Download dolphin-mistral model (optional)
+# Step 3: Download dolphin-mistral model (automatic)
 if ($ollamaInstalled) {
     Write-Header "Model Installation"
 
     # Determine ollama command
     $ollamaCmd = if (Test-Path $ollamaPath) { $ollamaPath } else { "ollama" }
 
-    # Check if dolphin-mistral is already installed
+    # Wait for Ollama service to be fully ready
+    Write-Info "Ensuring Ollama service is ready..."
+    Start-Sleep -Seconds 3
+
+    # Check if any models are installed
     try {
         $models = & $ollamaCmd list 2>&1
-        $hasDolphin = $models -match "dolphin-mistral"
+        $modelsList = $models | Out-String
+        $hasAnyModel = ($modelsList -match "\S") -and (-not ($modelsList -match "^NAME"))
+        $hasDolphin = $modelsList -match "dolphin-mistral"
 
         if ($hasDolphin) {
             Write-Success "dolphin-mistral model is already installed"
         }
-        else {
-            Write-Warning-Custom "The dolphin-mistral model is not installed."
-            Write-Info "This model is recommended for uncensored responses"
-            Write-Warning-Custom "Download size: ~4GB, this may take several minutes"
-            $response = Read-Host "Would you like to download dolphin-mistral? (y/n)"
+        elseif ($hasAnyModel) {
+            Write-Success "Found existing models installed"
+            Write-Info "dolphin-mistral is recommended but you have other models available"
+            $response = Read-Host "Would you like to also install dolphin-mistral? (y/n)"
 
             if ($response -eq 'y' -or $response -eq 'Y') {
                 Write-Info "Downloading dolphin-mistral model..."
-                Write-Info "This may take 5-10 minutes depending on your connection..."
+                Write-Warning-Custom "Download size: ~4GB, this may take 5-10 minutes"
                 Write-Info "Please be patient, the download is happening..."
 
                 & $ollamaCmd pull dolphin-mistral
@@ -230,13 +232,25 @@ if ($ollamaInstalled) {
                 }
                 else {
                     Write-ErrorMsg "Model download failed"
-                    Write-Info "You can download it later with: ollama pull dolphin-mistral"
                 }
             }
+        }
+        else {
+            Write-Warning-Custom "No models found. dolphin-mistral will be installed automatically"
+            Write-Info "This model is recommended for uncensored responses"
+            Write-Warning-Custom "Download size: ~4GB, this may take 5-10 minutes"
+            Write-Info "Please be patient, the download is happening..."
+
+            & $ollamaCmd pull dolphin-mistral
+
+            if ($LASTEXITCODE -eq 0) {
+                Write-Success "dolphin-mistral model downloaded successfully"
+            }
             else {
-                Write-Info "Skipping model download"
-                Write-Info "You can download models later with: ollama pull <model-name>"
-                Write-Info "Popular models: llama3.2, mistral, codellama"
+                Write-ErrorMsg "Model download failed"
+                Write-ErrorMsg "LocalLLMChat requires at least one model to function"
+                Write-Info "You can download it manually later with: ollama pull dolphin-mistral"
+                Read-Host "Press Enter to continue anyway"
             }
         }
 
@@ -308,34 +322,131 @@ else {
     exit 1
 }
 
-# Step 5: Final instructions
+# Step 5: Create Desktop Shortcut
+Write-Header "Creating Desktop Shortcut"
+
+$desktopPath = [Environment]::GetFolderPath("Desktop")
+$shortcutPath = Join-Path $desktopPath "LocalLLMChat.lnk"
+
+try {
+    $WScriptShell = New-Object -ComObject WScript.Shell
+    $Shortcut = $WScriptShell.CreateShortcut($shortcutPath)
+
+    if ($venvActivated) {
+        # Create batch file to activate venv and run
+        $batchPath = Join-Path (Get-Location) "run-localllmchat.bat"
+        $batchContent = @"
+@echo off
+cd /d "$((Get-Location).Path)"
+call venv\Scripts\activate.bat
+start /B local-llm-chat
+timeout /t 2 /nobreak >nul
+start http://localhost:5000
+exit
+"@
+        Set-Content -Path $batchPath -Value $batchContent
+        $Shortcut.TargetPath = $batchPath
+    }
+    else {
+        # Create batch file for global install
+        $batchPath = Join-Path (Get-Location) "run-localllmchat.bat"
+        $batchContent = @"
+@echo off
+start /B local-llm-chat
+timeout /t 2 /nobreak >nul
+start http://localhost:5000
+exit
+"@
+        Set-Content -Path $batchPath -Value $batchContent
+        $Shortcut.TargetPath = $batchPath
+    }
+
+    $Shortcut.WorkingDirectory = (Get-Location).Path
+    $Shortcut.Description = "LocalLLMChat - Chat with Local LLM Models"
+    $Shortcut.Save()
+
+    Write-Success "Desktop shortcut created: LocalLLMChat.lnk"
+}
+catch {
+    Write-Warning-Custom "Could not create desktop shortcut: $_"
+}
+
+# Step 6: Start the application and launch browser
+Write-Header "Launching LocalLLMChat"
+
+Write-Info "Starting LocalLLMChat server..."
+Write-Info "This will open in your browser automatically"
+Write-Host ""
+
+# Ensure Ollama is running
+if ($ollamaInstalled) {
+    try {
+        $ollamaCmd = if (Test-Path $ollamaPath) { $ollamaPath } else { "ollama" }
+        $null = & $ollamaCmd list 2>&1
+    }
+    catch {
+        Write-Warning-Custom "Ollama service may not be running"
+        Write-Info "Attempting to start Ollama..."
+        try {
+            Start-Process -FilePath "net" -ArgumentList "start", "Ollama" -Verb RunAs -WindowStyle Hidden -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 3
+        }
+        catch {
+            Write-Warning-Custom "Could not start Ollama service automatically"
+        }
+    }
+}
+
+# Start LocalLLMChat in background
+try {
+    if ($venvActivated) {
+        Write-Info "Starting from virtual environment..."
+        Start-Process -FilePath "python" -ArgumentList "-m", "local_llm_chat.app", "--foreground" -WindowStyle Minimized
+    }
+    else {
+        Write-Info "Starting LocalLLMChat..."
+        Start-Process -FilePath "local-llm-chat" -ArgumentList "--foreground" -WindowStyle Minimized -ErrorAction Stop
+    }
+
+    # Wait for server to start
+    Write-Info "Waiting for server to start..."
+    Start-Sleep -Seconds 4
+
+    # Open browser
+    Write-Info "Opening browser..."
+    Start-Process "http://localhost:5000"
+
+    Write-Success "LocalLLMChat is now running!"
+    Write-Host ""
+    Write-Info "The application is running in the background"
+    Write-Info "Your browser should open automatically"
+    Write-Host ""
+    Write-Info "To start LocalLLMChat in the future:"
+    Write-Host "  • Double-click the 'LocalLLMChat' icon on your desktop"
+    if ($venvActivated) {
+        Write-Host "  • Or run: venv\Scripts\activate.bat && local-llm-chat" -ForegroundColor Gray
+    }
+    else {
+        Write-Host "  • Or run: local-llm-chat" -ForegroundColor Gray
+    }
+    Write-Host ""
+    Write-Info "To stop the server: Use the 'Shutdown Server' button in the web interface"
+}
+catch {
+    Write-Warning-Custom "Could not start LocalLLMChat automatically"
+    Write-Info "You can start it manually with the desktop shortcut or:"
+    if ($venvActivated) {
+        Write-Host "   venv\Scripts\activate.bat && local-llm-chat"
+    }
+    else {
+        Write-Host "   local-llm-chat"
+    }
+}
+
+# Step 7: Final information
 Write-Header "Installation Complete!"
 
 Write-Success "LocalLLMChat has been installed successfully!"
-Write-Host ""
-
-Write-Info "To start using LocalLLMChat:"
-Write-Host ""
-
-if ($venvActivated) {
-    Write-Host "1. Activate the virtual environment:" -ForegroundColor Green
-    Write-Host "   venv\Scripts\Activate.ps1" -ForegroundColor White
-    Write-Host "   (Or in CMD: venv\Scripts\activate.bat)" -ForegroundColor Gray
-    Write-Host ""
-    Write-Host "2. Start the application:" -ForegroundColor Green
-    Write-Host "   local-llm-chat" -ForegroundColor White
-}
-else {
-    Write-Host "1. Start the application:" -ForegroundColor Green
-    Write-Host "   local-llm-chat" -ForegroundColor White
-    Write-Host ""
-    Write-Host "   Note: If 'local-llm-chat' is not found, try:" -ForegroundColor Yellow
-    Write-Host "   python -m local_llm_chat.app" -ForegroundColor White
-}
-
-Write-Host ""
-Write-Host "3. Open your browser to:" -ForegroundColor Green
-Write-Host "   http://localhost:5000" -ForegroundColor White
 Write-Host ""
 
 if ($ollamaInstalled) {
@@ -350,18 +461,12 @@ if ($ollamaInstalled) {
             Write-Host "   Model: dolphin-mistral"
         }
         else {
-            Write-Host "   Model: (download with: ollama pull dolphin-mistral)"
+            Write-Host "   Model: (first available model)"
         }
     }
     catch {
-        Write-Host "   Model: (download with: ollama pull dolphin-mistral)"
+        Write-Host "   Model: (check Ollama)"
     }
-}
-else {
-    Write-Warning-Custom "Ollama not installed. You'll need to:"
-    Write-Host "   - Download and install Ollama from https://ollama.com/download"
-    Write-Host "   - Run: ollama pull dolphin-mistral"
-    Write-Host "   - Or install LM Studio from https://lmstudio.ai"
 }
 
 Write-Host ""
@@ -371,4 +476,4 @@ Write-Host ""
 Write-Success "Happy chatting! 🎉"
 Write-Host ""
 
-Read-Host "Press Enter to exit"
+Read-Host "Press Enter to exit (LocalLLMChat will continue running)"

@@ -143,10 +143,9 @@ if command -v ollama &> /dev/null; then
     print_info "Version: $OLLAMA_VERSION"
 else
     echo -e "${YELLOW}Ollama is not installed.${NC}"
+    print_info "Ollama is required for LocalLLMChat to function"
     print_warning "Ollama requires about 1GB of storage space"
-    read -p "Would you like to install Ollama? (y/n): " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    print_info "Installing Ollama automatically..."
         print_info "Installing Ollama..."
         curl -fsSL https://ollama.com/install.sh | sh
 
@@ -160,15 +159,13 @@ else
             print_success "Ollama service started in background"
         else
             print_error "Ollama installation failed"
-            print_info "You can try installing manually later"
+            print_error "LocalLLMChat requires Ollama to function"
+            print_info "Please install manually and run this script again"
+            exit 1
         fi
-    else
-        print_info "Skipping Ollama installation"
-        print_warning "You'll need to install a local LLM service to use LocalLLMChat"
-    fi
 fi
 
-# Step 4: Download a small model suitable for Chromebook
+# Step 4: Download model suitable for Chromebook (automatic)
 if command -v ollama &> /dev/null; then
     print_header "Model Installation"
 
@@ -179,79 +176,47 @@ if command -v ollama &> /dev/null; then
         sleep 3
     fi
 
-    print_info "Chromebook Model Recommendations:"
-    echo -e "  ${GREEN}1. dolphin-mistral${NC} (4GB) - Uncensored, good quality"
-    echo -e "  ${GREEN}2. llama3.2:3b${NC} (2GB) - Small but capable"
-    echo -e "  ${GREEN}3. llama3.2:1b${NC} (1GB) - Smallest, fastest"
-    echo -e "  ${GREEN}4. phi${NC} (1.6GB) - Efficient, good for limited resources"
-    echo
-
     # Check existing models
-    EXISTING_MODELS=$(ollama list 2>/dev/null)
+    EXISTING_MODELS=$(ollama list 2>/dev/null | tail -n +2)
+    HAS_ANY_MODEL=$(echo "$EXISTING_MODELS" | grep -q "." && echo "yes" || echo "no")
 
-    if echo "$EXISTING_MODELS" | grep -q "dolphin-mistral"; then
-        print_success "dolphin-mistral is already installed"
-        INSTALL_MODEL=false
-    elif echo "$EXISTING_MODELS" | grep -q "llama3.2"; then
-        print_success "llama3.2 is already installed"
-        INSTALL_MODEL=false
-    elif echo "$EXISTING_MODELS" | grep -q "phi"; then
-        print_success "phi is already installed"
-        INSTALL_MODEL=false
+    if [ "$HAS_ANY_MODEL" = "yes" ]; then
+        print_success "Found existing models installed:"
+        ollama list 2>/dev/null
     else
-        INSTALL_MODEL=true
-    fi
+        print_warning "No models found. Installing appropriate model for Chromebook..."
 
-    if [ "$INSTALL_MODEL" = true ]; then
-        echo "Which model would you like to install?"
-        echo "  1) dolphin-mistral (4GB) - Recommended if you have space"
-        echo "  2) llama3.2:3b (2GB)"
-        echo "  3) llama3.2:1b (1GB) - For very limited resources"
-        echo "  4) phi (1.6GB)"
-        echo "  5) Skip model installation"
-        read -p "Enter choice (1-5): " -n 1 -r
-        echo
+        # Determine best model based on available space and RAM
+        if [ "$AVAILABLE_SPACE" -ge 20 ] && [ "$TOTAL_RAM" -ge 8 ]; then
+            MODEL="dolphin-mistral"
+            MODEL_SIZE="4GB"
+            print_info "You have sufficient resources for dolphin-mistral (recommended)"
+        elif [ "$AVAILABLE_SPACE" -ge 15 ] && [ "$TOTAL_RAM" -ge 6 ]; then
+            MODEL="llama3.2:3b"
+            MODEL_SIZE="2GB"
+            print_info "Installing llama3.2:3b (good balance for your Chromebook)"
+        elif [ "$AVAILABLE_SPACE" -ge 10 ] && [ "$TOTAL_RAM" -ge 4 ]; then
+            MODEL="phi"
+            MODEL_SIZE="1.6GB"
+            print_info "Installing phi (efficient for limited resources)"
+        else
+            MODEL="llama3.2:1b"
+            MODEL_SIZE="1GB"
+            print_info "Installing llama3.2:1b (smallest, best for limited resources)"
+        fi
 
-        case $REPLY in
-            1)
-                MODEL="dolphin-mistral"
-                MODEL_SIZE="4GB"
-                ;;
-            2)
-                MODEL="llama3.2:3b"
-                MODEL_SIZE="2GB"
-                ;;
-            3)
-                MODEL="llama3.2:1b"
-                MODEL_SIZE="1GB"
-                ;;
-            4)
-                MODEL="phi"
-                MODEL_SIZE="1.6GB"
-                ;;
-            5)
-                print_info "Skipping model installation"
-                MODEL=""
-                ;;
-            *)
-                print_warning "Invalid choice, skipping model installation"
-                MODEL=""
-                ;;
-        esac
+        print_warning "Download size: ~${MODEL_SIZE}, this may take 5-15 minutes"
+        print_info "Please be patient and keep this window open"
 
-        if [ -n "$MODEL" ]; then
-            print_info "Downloading $MODEL model (~${MODEL_SIZE})..."
-            print_warning "This may take 5-15 minutes on Chromebook..."
-            print_info "Please be patient and keep this window open"
+        ollama pull "$MODEL"
 
-            ollama pull "$MODEL"
-
-            if [ $? -eq 0 ]; then
-                print_success "$MODEL model downloaded successfully"
-            else
-                print_error "Model download failed"
-                print_info "You can try downloading again later with: ollama pull $MODEL"
-            fi
+        if [ $? -eq 0 ]; then
+            print_success "$MODEL model downloaded successfully"
+        else
+            print_error "Model download failed"
+            print_error "LocalLLMChat requires at least one model to function"
+            print_info "You can download it manually later with: ollama pull $MODEL"
+            read -p "Press Enter to continue anyway..."
         fi
     fi
 
@@ -308,10 +273,73 @@ else
     exit 1
 fi
 
-# Step 6: Final instructions
+# Step 6: Create Desktop Launcher
+print_header "Creating Desktop Launcher"
+
+# Create .desktop file for Chromebook
+DESKTOP_FILE="$HOME/Desktop/LocalLLMChat.desktop"
+INSTALL_DIR="$(pwd)"
+
+cat > "$DESKTOP_FILE" << EOF
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=LocalLLMChat
+Comment=Chat with Local LLM Models
+Exec=bash -c 'cd "$INSTALL_DIR" && if [ -f venv/bin/activate ]; then source venv/bin/activate; fi && if ! pgrep -x ollama > /dev/null; then ollama serve > /dev/null 2>&1 & sleep 2; fi && local-llm-chat --foreground & sleep 3 && xdg-open http://localhost:5000'
+Terminal=false
+Categories=Network;Chat;
+EOF
+
+chmod +x "$DESKTOP_FILE"
+gio set "$DESKTOP_FILE" metadata::trusted true 2>/dev/null || true
+print_success "Desktop launcher created: LocalLLMChat.desktop"
+
+# Step 7: Start the application and launch browser
+print_header "Launching LocalLLMChat"
+
+print_info "Starting LocalLLMChat server..."
+print_info "This will open in your browser automatically"
+echo
+
+# Ensure Ollama is running
+if command -v ollama &> /dev/null; then
+    if ! pgrep -x "ollama" > /dev/null; then
+        print_info "Starting Ollama service..."
+        ollama serve > /dev/null 2>&1 &
+        sleep 2
+        print_success "Ollama service started"
+    fi
+fi
+
+# Start LocalLLMChat
+if [ "$VENV_ACTIVATED" = true ]; then
+    print_info "Starting from virtual environment..."
+    (local-llm-chat --foreground &)
+else
+    print_info "Starting LocalLLMChat..."
+    (local-llm-chat --foreground &)
+fi
+
+# Wait for server to start
+print_info "Waiting for server to start..."
+sleep 4
+
+# Open browser
+print_info "Opening browser..."
+xdg-open http://localhost:5000 2>/dev/null || {
+    print_warning "Could not open browser automatically"
+    print_info "Please open http://localhost:5000 in Chrome"
+}
+
+# Step 8: Final information
 print_header "Installation Complete!"
 
-print_success "LocalLLMChat has been installed successfully on your Chromebook!"
+print_success "LocalLLMChat has been installed and is now running on your Chromebook!"
+echo
+
+print_info "The application is running in the background"
+print_info "Your browser should open automatically"
 echo
 
 print_info "Chromebook Performance Tips:"
@@ -321,26 +349,16 @@ echo "  • Lower the temperature for faster responses"
 echo "  • Be patient - first responses may be slower"
 echo
 
-print_info "To start using LocalLLMChat:"
-echo
-
+print_info "To start LocalLLMChat in the future:"
+echo "  • Double-click the 'LocalLLMChat' icon on your desktop"
 if [ "$VENV_ACTIVATED" = true ]; then
-    echo -e "${GREEN}1. Activate the virtual environment:${NC}"
-    echo "   source venv/bin/activate"
-    echo
-    echo -e "${GREEN}2. Start the application:${NC}"
-    echo "   local-llm-chat"
+    echo -e "  ${YELLOW}• Or run: source venv/bin/activate && local-llm-chat${NC}"
 else
-    echo -e "${GREEN}1. Start the application:${NC}"
-    echo "   local-llm-chat"
-    echo
-    echo -e "${YELLOW}   Note: If 'local-llm-chat' is not found, restart your terminal or run:${NC}"
-    echo "   source ~/.bashrc"
+    echo -e "  ${YELLOW}• Or run: local-llm-chat${NC}"
 fi
-
 echo
-echo -e "${GREEN}3. Open Chrome browser to:${NC}"
-echo "   http://localhost:5000"
+
+print_info "To stop the server: Use the 'Shutdown Server' button in the web interface"
 echo
 
 if command -v ollama &> /dev/null; then
@@ -357,27 +375,19 @@ if command -v ollama &> /dev/null; then
     elif ollama list 2>/dev/null | grep -q "phi"; then
         echo "   Model: phi"
     else
-        echo "   Model: (download with: ollama pull llama3.2:1b)"
+        echo "   Model: (first available model)"
     fi
-else
-    print_warning "Ollama not installed."
-    echo "   You can install it later with:"
-    echo "   curl -fsSL https://ollama.com/install.sh | sh"
 fi
 
 echo
-print_warning "Note: If Ollama service stops, restart it with:"
+print_warning "Note: If Ollama service stops, restart it from the desktop icon or with:"
 echo "   ollama serve > /dev/null 2>&1 &"
-echo
-
-print_info "Recommended models for Chromebook:"
-echo "   • llama3.2:1b (1GB) - Fastest, lowest resource usage"
-echo "   • phi (1.6GB) - Good balance"
-echo "   • llama3.2:3b (2GB) - Better quality"
-echo "   • dolphin-mistral (4GB) - Best quality (if you have resources)"
 echo
 
 print_info "For detailed setup instructions, see SETUP.md"
 print_info "For usage information, see README.md"
 echo
 print_success "Happy chatting on your Chromebook! 🎉"
+echo
+
+read -p "Press Enter to exit (LocalLLMChat will continue running)..."
