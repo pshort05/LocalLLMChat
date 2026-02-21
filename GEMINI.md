@@ -47,6 +47,15 @@ pip install -r requirements.txt
 -   **Default:** `local-llm-chat` (Runs in background on Unix-like systems).
 -   **Development:** `local-llm-chat --debug --foreground`.
 -   **Custom Port:** `local-llm-chat --port 8080`.
+- **Process Management (PM2):**
+    -   The application is configured to run at startup via PM2.
+    -   **Ollama (LLM Engine):** `pm2 start /usr/local/bin/ollama --name "ollama" -- serve`
+        -   Note: Environment variables `OLLAMA_HOST=0.0.0.0:11434`, `OLLAMA_ORIGINS=*`, and `OLLAMA_MODELS=/usr/share/ollama/.ollama/models` are required.
+    -   **LocalLLMChat (Web UI):** `pm2 start venv/bin/local-llm-chat --name "local-llm-chat" --interpreter venv/bin/python3 -- --foreground`
+    -   **View All Status:** `pm2 status`
+    -   **View Logs:** `pm2 logs <name>`
+    -   **Restart:** `pm2 restart <name>`
+
 
 ### Testing & Quality Assurance
 -   **Formatting:** Rigorously follow **Black** formatting (line length 88).
