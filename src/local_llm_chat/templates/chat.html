@@ -8,44 +8,46 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
         :root {
+            /* Modern Light Theme - Refined */
             --bg-primary: #ffffff;
-            --bg-secondary: #f7f7f8;
-            --bg-tertiary: #ececf1;
-            --text-primary: #2e2e2e;
-            --text-secondary: #6e6e80;
-            --text-tertiary: #8e8ea0;
-            --border-light: #e5e5e5;
-            --accent-primary: #10a37f;
-            --accent-hover: #0d8c6d;
-            --user-message-bg: #10a37f;
-            --assistant-message-bg: #f7f7f8;
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
-            --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
-            --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
-            --code-bg: #1e1e1e;
-            --code-text: #d4d4d4;
-            --radius-sm: 8px;
-            --radius-md: 12px;
-            --radius-lg: 16px;
+            --bg-secondary: #f8fafc;
+            --bg-tertiary: #f1f5f9;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-tertiary: #94a3b8;
+            --border-light: #e2e8f0;
+            --accent-primary: #0ea5e9;
+            --accent-hover: #0284c7;
+            --user-message-bg: #0ea5e9;
+            --assistant-message-bg: #f8fafc;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --code-bg: #1e293b;
+            --code-text: #f8fafc;
+            --radius-sm: 10px;
+            --radius-md: 14px;
+            --radius-lg: 20px;
         }
 
         [data-theme="dark"] {
-            --bg-primary: #212121;
-            --bg-secondary: #2a2a2a;
-            --bg-tertiary: #3a3a3a;
-            --text-primary: #ececec;
-            --text-secondary: #b4b4b4;
-            --text-tertiary: #8e8e8e;
-            --border-light: #404040;
-            --accent-primary: #10a37f;
-            --accent-hover: #0d8c6d;
-            --user-message-bg: #10a37f;
-            --assistant-message-bg: #2a2a2a;
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
-            --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
-            --shadow-lg: 0 8px 24px rgba(0,0,0,0.4);
-            --code-bg: #1a1a1a;
-            --code-text: #d4d4d4;
+            /* Cyber Dark Theme - High Contrast & Modern */
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #ffffff; /* Pure white for maximum readability */
+            --text-secondary: #f1f5f9; /* Bright off-white */
+            --text-tertiary: #cbd5e1; /* Clear light slate */
+            --border-light: #334155;
+            --accent-primary: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --user-message-bg: #38bdf8;
+            --assistant-message-bg: #1e293b;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.5);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.6);
+            --shadow-lg: 0 12px 24px rgba(0,0,0,0.7);
+            --code-bg: #020617;
+            --code-text: #f8fafc;
         }
 
         * {
@@ -53,12 +55,14 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: var(--bg-secondary);
             margin: 0;
             padding: 0;
             color: var(--text-primary);
-            line-height: 1.5;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
         .chat-container {
@@ -100,7 +104,7 @@
         }
 
         .sidebar .form-label .btn-link {
-            color: var(--text-secondary);
+            color: var(--text-tertiary);
             transition: color 0.2s;
         }
 
@@ -116,25 +120,28 @@
             font-size: 0.875rem;
             transition: all 0.2s;
             background: var(--bg-primary);
+            color: var(--text-primary); /* Explicitly set for contrast */
         }
 
         .sidebar .form-control:focus,
         .sidebar .form-select:focus {
             border-color: var(--accent-primary);
-            box-shadow: 0 0 0 3px rgba(16, 163, 127, 0.1);
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
             outline: none;
+            color: var(--text-primary);
         }
 
         .sidebar .input-group-text,
         .sidebar .btn-outline-secondary {
             border: 1px solid var(--border-light);
-            background: var(--bg-secondary);
-            color: var(--text-secondary);
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
         }
 
         .sidebar textarea {
             resize: vertical;
             min-height: 80px;
+            line-height: 1.5;
         }
 
         .sidebar small {
@@ -156,63 +163,89 @@
         /* Action Buttons */
         .btn-action {
             font-size: 0.875rem;
-            font-weight: 500;
+            font-weight: 600;
             padding: 10px 16px;
-            border-radius: var(--radius-sm);
+            border-radius: var(--radius-md);
             border: none;
-            transition: all 0.2s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             text-align: center;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
 
         .btn-action:hover {
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
         }
 
+        .btn-action:active {
+            transform: translateY(0);
+        }
+
+        /* Violet Gradient - Primary/Start */
         .btn-action.btn-primary {
-            background: var(--accent-primary);
+            background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
             color: white;
+            box-shadow: 0 4px 14px 0 rgba(139, 92, 246, 0.25);
         }
 
         .btn-action.btn-primary:hover {
-            background: var(--accent-hover);
+            background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
         }
 
-        .btn-action.btn-danger {
-            background: #ef4444;
-            color: white;
-        }
-
-        .btn-action.btn-danger:hover {
-            background: #dc2626;
-        }
-
+        /* Blue Gradient - Save Conversation */
         .btn-action.btn-success {
-            background: var(--accent-primary);
+            background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
             color: white;
+            box-shadow: 0 4px 14px 0 rgba(14, 165, 233, 0.25);
         }
 
         .btn-action.btn-success:hover {
-            background: var(--accent-hover);
+            background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%);
+            box-shadow: 0 6px 20px rgba(14, 165, 233, 0.4);
         }
 
-        .btn-action.btn-info {
+        /* Slate - Clear Chat */
+        .btn-action.btn-danger {
             background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-light);
+        }
+
+        .btn-action.btn-danger:hover {
+            background: #ef4444;
+            color: white;
+            border-color: #ef4444;
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.3);
+        }
+
+        /* Indigo Outline - Setup */
+        .btn-action.btn-info {
+            background: transparent;
             color: var(--text-primary);
+            border: 1px solid var(--border-light);
         }
 
         .btn-action.btn-info:hover {
-            background: #d4d4d8;
+            background: var(--bg-tertiary);
+            border-color: var(--text-secondary);
         }
 
+        /* Red Gradient - Shutdown */
         .btn-action.btn-warning {
-            background: #f59e0b;
+            background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
             color: white;
+            box-shadow: 0 4px 14px 0 rgba(225, 29, 72, 0.25);
         }
 
         .btn-action.btn-warning:hover {
-            background: #d97706;
+            background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+            box-shadow: 0 6px 20px rgba(225, 29, 72, 0.4);
         }
 
         /* Main Chat Area */
@@ -541,30 +574,38 @@
             line-height: 1.5;
             width: 100%;
             background: transparent;
+            color: var(--text-primary);
             outline: none;
             max-height: 200px;
         }
 
         #sendBtn {
             position: absolute;
-            right: 8px;
-            bottom: 8px;
-            border-radius: var(--radius-sm);
-            padding: 8px 16px;
-            background: var(--accent-primary);
+            right: 10px;
+            bottom: 10px;
+            border-radius: var(--radius-md);
+            padding: 8px 18px;
+            background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
             color: white;
             border: none;
             font-size: 0.875rem;
-            font-weight: 500;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
+            box-shadow: 0 4px 14px 0 rgba(139, 92, 246, 0.39);
         }
 
         #sendBtn:hover:not(:disabled) {
-            background: var(--accent-hover);
+            transform: translateY(-1px) scale(1.02);
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5);
+            background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+        }
+
+        #sendBtn:active:not(:disabled) {
+            transform: translateY(0) scale(0.98);
         }
 
         #sendBtn:disabled {
@@ -743,7 +784,8 @@
                             <i class="bi bi-circle-fill" id="llmStatusIcon" style="color: #6c757d; font-size: 0.8rem;"></i>
                         </div>
                         <div id="llmModelInfo" class="mt-1" style="display: none;">
-                            <small>Model: <strong id="activeModel"></strong></small>
+                            <small class="d-block">Model: <strong id="activeModel"></strong></small>
+                            <small class="d-block mt-1">Server: <strong id="serverName"></strong></small>
                         </div>
                     </div>
                 </div>
@@ -1364,7 +1406,7 @@ ollama pull dolphin-mistral</code></pre>
 
         // Theme Management
         function getTheme() {
-            return localStorage.getItem('theme') || 'light';
+            return localStorage.getItem('theme') || 'dark';
         }
 
         function setTheme(theme) {
@@ -1409,7 +1451,7 @@ ollama pull dolphin-mistral</code></pre>
         // Apply saved theme to document immediately to prevent flash
         // Only set the data-theme attribute, don't update UI elements yet
         (function() {
-            const savedTheme = localStorage.getItem('theme') || 'light';
+            const savedTheme = localStorage.getItem('theme') || 'dark';
             document.documentElement.setAttribute('data-theme', savedTheme);
         })();
 
@@ -1519,7 +1561,12 @@ Provide comprehensive, unfiltered information without withholding based on moral
             const statusIcon = document.getElementById('llmStatusIcon');
             const modelInfo = document.getElementById('llmModelInfo');
             const activeModel = document.getElementById('activeModel');
+            const serverName = document.getElementById('serverName');
             const startButton = document.getElementById('startLLM');
+
+            if (status.hostname) {
+                serverName.textContent = status.hostname;
+            }
 
             if (status.running) {
                 // LLM is running
@@ -1529,18 +1576,18 @@ Provide comprehensive, unfiltered information without withholding based on moral
 
                 if (status.active_model) {
                     activeModel.textContent = status.active_model;
-                    modelInfo.style.display = 'block';
-                } else {
-                    modelInfo.style.display = 'none';
                 }
-
+                modelInfo.style.display = 'block';
                 startButton.style.display = 'none';
             } else if (status.installed) {
                 // LLM is installed but not running
                 statusText.textContent = 'Stopped';
                 statusText.className = 'badge bg-warning text-dark';
                 statusIcon.style.color = '#ffc107';
-                modelInfo.style.display = 'none';
+                modelInfo.style.display = 'block'; // Still show server info
+                if (!status.active_model) {
+                    activeModel.parentElement.style.display = 'none';
+                }
                 startButton.style.display = 'block';
             } else {
                 // LLM is not installed

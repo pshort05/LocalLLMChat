@@ -357,6 +357,7 @@ class LocalLLMChat:
         """
         import subprocess
         import platform
+        import socket
 
         status_info = {
             "running": False,
@@ -365,6 +366,7 @@ class LocalLLMChat:
             "models": [],
             "active_model": None,
             "platform": platform.system(),
+            "hostname": socket.gethostname(),
         }
 
         # Check if Ollama is installed
