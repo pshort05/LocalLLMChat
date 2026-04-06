@@ -163,6 +163,7 @@ LocalLLMChat/
 ├── install-macos.sh            # macOS install script
 ├── install-windows.ps1         # Windows PowerShell install script
 ├── install-chromebook.sh       # Chromebook install script
+├── update-models.sh            # Update all installed Ollama models to latest
 ├── pyproject.toml              # Project configuration
 ├── requirements.txt            # Python dependencies
 ├── README.md                   # User documentation

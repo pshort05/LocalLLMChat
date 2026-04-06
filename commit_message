@@ -1,16 +1,45 @@
-feat: settings persistence, Linux systemd service installer, network access, README overhaul
+feat: model-agnostic chat history with auto-save and browser UI
 
-- Add settings.yaml (pyyaml) with GET /api/settings and POST /api/settings routes
-- Auto-create ~/.local_llm_chat/settings.yaml with defaults on first run
-- UI loads saved settings (endpoint, model, temperature, theme, system_prompt) on page load
-- UI auto-saves settings on change with 600ms debounce; theme toggle also persists
-- Move default system prompt from JS constant to Python backend
-- Add install-service-linux.sh: installs Ollama if missing, creates systemd service (system or --user), enables on boot
-- Firewall handling in service installer: auto-detects and opens port via ufw, firewalld, or iptables
-- Firewall rules removed on --uninstall
-- Detect and display local network IP in install summary
-- Add get_local_ip(), open_firewall_port(), close_firewall_port() helpers to installer
-- Add pyyaml>=6.0 to requirements.txt and pyproject.toml
-- Update INSTALL.md with service installer section
-- Overhaul README.md: full feature list, all install methods, settings reference table, API reference table, service management, updated troubleshooting
-- Update CLAUDE.md: new API endpoints, settings config section, install scripts, commit_message workflow
+- Conversations auto-save after every assistant reply (no manual save needed)
+- Auto-save uses upsert — same conversation updates in place, no duplicates
+- New conversation file format: id, title (from first user message), created_at,
+  updated_at, origin_model, origin_endpoint, messages[]
+- Messages are model-agnostic role/content pairs; any model can continue any chat
+- New backend endpoints:
+  - GET  /api/conversations/<id>  — load single conversation
+  - DELETE /api/conversations/<id> — delete single conversation
+  - DELETE /api/conversations      — delete all conversations
+- Updated POST /api/save_conversation — now accepts id (upsert), model, endpoint
+- Updated GET /api/conversations — returns title, origin_model, updated_at sorted newest-first
+- New "Chat History" button in sidebar and collapsed icon strip
+- History modal lists all saved chats: title, origin model, date, message count
+- Load button restores full conversation; current model continues it unchanged
+- Cross-model indicator shown in status bar when loading from a different model
+- Delete individual or delete-all with confirmation dialogs
+- Clear Chat resets currentConversationId so next chat starts as a new save
+
+fix: dark mode styling for all modal windows (Chat History, Setup LLM, Model Help)
+
+- Modal content uses deep blue (#0f172a) background matching Cyber Dark theme
+- Modal header uses darker blue (#0a1628) to visually distinguish it as a new layer
+- Blue border and glow effect (rgba accent) frames modal against dark background
+- Nav tabs styled: inactive=muted slate, hover=subtle highlight, active=accent blue
+- Code blocks use near-black (#020617) with light text and blue border
+- Alerts updated to blue-tinted variants for consistency
+- All text (headings, paragraphs, list items, strong) explicitly set to readable slate tones
+- Close button inverted so it's visible on dark header
+- Modal backdrop uses deep navy (#020617) instead of Bootstrap default grey
+
+fix: dark mode placeholder text too dim in chat input and sidebar fields
+
+- #chatInput::placeholder set to #94a3b8 (slate-400) — clearly readable on dark bg
+- Sidebar form-control/select placeholders set to #64748b (slate-500)
+- opacity: 1 prevents browsers from applying additional dimming on top
+
+feat: Save Configuration button persists all settings explicitly
+
+- New "Save Configuration" button at top of sidebar actions and collapsed icon strip
+- Saves endpoint, model, temperature, theme, system prompt immediately (no debounce)
+- Button transitions: idle → "Saving..." → "Saved!" (green) or "Failed" (red) then resets
+- Refactored collectSettings() helper shared by both auto-save and explicit save
+- Added icon-primary hover style to collapsed icon strip for consistency

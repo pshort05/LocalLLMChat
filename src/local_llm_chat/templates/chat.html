@@ -75,6 +75,7 @@
         /* Sidebar Styles */
         .sidebar {
             width: 280px;
+            min-width: 280px;
             background: var(--bg-primary);
             border-right: 1px solid var(--border-light);
             padding: 20px;
@@ -82,6 +83,8 @@
             display: flex;
             flex-direction: column;
             gap: 24px;
+            transition: width 0.25s ease, min-width 0.25s ease, padding 0.25s ease;
+            flex-shrink: 0;
         }
 
         .sidebar h5 {
@@ -91,8 +94,119 @@
             letter-spacing: 0.5px;
             color: var(--text-secondary);
             margin: 0;
+        }
+
+        /* Sidebar header row (title + toggle button) */
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             padding-bottom: 12px;
             border-bottom: 1px solid var(--border-light);
+        }
+
+        .sidebar-toggle-btn {
+            background: none;
+            border: none;
+            color: var(--text-tertiary);
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: var(--radius-sm);
+            line-height: 1;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .sidebar-toggle-btn:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        /* Collapsed state */
+        .sidebar.collapsed {
+            width: 52px;
+            min-width: 52px;
+            padding: 12px 8px;
+            gap: 0;
+            overflow: hidden;
+        }
+
+        .sidebar.collapsed .sidebar-full-content {
+            display: none;
+        }
+
+        /* Icon strip shown when collapsed */
+        .sidebar-icon-strip {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            width: 100%;
+        }
+
+        .sidebar.collapsed .sidebar-icon-strip {
+            display: flex;
+        }
+
+        .icon-strip-btn {
+            width: 36px;
+            height: 36px;
+            background: none;
+            border: 1px solid transparent;
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .icon-strip-btn:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--border-light);
+            color: var(--text-primary);
+        }
+
+        .icon-strip-btn.icon-primary:hover {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            color: white;
+            border-color: transparent;
+        }
+
+        .icon-strip-btn.icon-danger:hover {
+            background: #ef4444;
+            color: white;
+            border-color: #ef4444;
+        }
+
+        .icon-strip-btn.icon-warning:hover {
+            background: #f43f5e;
+            color: white;
+            border-color: #f43f5e;
+        }
+
+        .icon-strip-btn.icon-success:hover {
+            background: linear-gradient(135deg, #38bdf8, #0284c7);
+            color: white;
+            border-color: transparent;
+        }
+
+        .icon-strip-divider {
+            width: 28px;
+            height: 1px;
+            background: var(--border-light);
+            margin: 6px 0;
+        }
+
+        .icon-strip-status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #6c757d;
+            flex-shrink: 0;
         }
 
         .sidebar .form-label {
@@ -579,6 +693,17 @@
             max-height: 200px;
         }
 
+        [data-theme="dark"] #chatInput::placeholder {
+            color: #94a3b8;
+            opacity: 1;
+        }
+
+        [data-theme="dark"] .sidebar .form-control::placeholder,
+        [data-theme="dark"] .sidebar .form-select::placeholder {
+            color: #64748b;
+            opacity: 1;
+        }
+
         #sendBtn {
             position: absolute;
             right: 10px;
@@ -727,143 +852,381 @@
             padding: 16px 24px;
         }
 
+        /* Dark mode modals — deep blue shell with readable internals */
+        [data-theme="dark"] .modal-content {
+            background-color: #0f172a;
+            border: 1px solid #1e3a5f;
+            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(56, 189, 248, 0.1);
+        }
+
+        [data-theme="dark"] .modal-header {
+            background-color: #0a1628;
+            border-bottom: 1px solid #1e3a5f;
+            color: var(--text-primary);
+        }
+
+        [data-theme="dark"] .modal-header .modal-title {
+            color: #e2e8f0;
+        }
+
+        [data-theme="dark"] .modal-header .btn-close {
+            filter: invert(1) brightness(0.7);
+        }
+
+        [data-theme="dark"] .modal-body {
+            background-color: #0f172a;
+            color: var(--text-primary);
+        }
+
+        [data-theme="dark"] .modal-footer {
+            background-color: #0a1628;
+            border-top: 1px solid #1e3a5f;
+        }
+
+        /* Nav tabs inside dark modals */
+        [data-theme="dark"] .modal .nav-tabs {
+            border-bottom-color: #1e3a5f;
+        }
+
+        [data-theme="dark"] .modal .nav-tabs .nav-link {
+            color: #94a3b8;
+            border-color: transparent;
+        }
+
+        [data-theme="dark"] .modal .nav-tabs .nav-link:hover {
+            color: #e2e8f0;
+            border-color: #334155 #334155 transparent;
+            background-color: rgba(255,255,255,0.05);
+        }
+
+        [data-theme="dark"] .modal .nav-tabs .nav-link.active {
+            color: #38bdf8;
+            background-color: #0f172a;
+            border-color: #1e3a5f #1e3a5f #0f172a;
+        }
+
+        /* Tab pane content in dark modals */
+        [data-theme="dark"] .modal .tab-content {
+            color: var(--text-primary);
+        }
+
+        /* Code blocks inside dark modals */
+        [data-theme="dark"] .modal pre {
+            background-color: #020617 !important;
+            color: #e2e8f0 !important;
+            border: 1px solid #1e3a5f;
+        }
+
+        /* Headings inside dark modal body */
+        [data-theme="dark"] .modal-body h5,
+        [data-theme="dark"] .modal-body h6 {
+            color: #e2e8f0;
+        }
+
+        /* List items and paragraphs */
+        [data-theme="dark"] .modal-body p,
+        [data-theme="dark"] .modal-body li,
+        [data-theme="dark"] .modal-body small {
+            color: #cbd5e1;
+        }
+
+        /* Strong / bold text */
+        [data-theme="dark"] .modal-body strong {
+            color: #f1f5f9;
+        }
+
         /* Alert styling for dark mode */
         [data-theme="dark"] .alert-info {
-            background-color: rgba(16, 163, 127, 0.15);
-            border-color: rgba(16, 163, 127, 0.3);
-            color: var(--text-primary);
+            background-color: rgba(56, 189, 248, 0.1);
+            border-color: rgba(56, 189, 248, 0.25);
+            color: #e2e8f0;
         }
 
         [data-theme="dark"] .alert-warning {
             background-color: rgba(245, 158, 11, 0.15);
             border-color: rgba(245, 158, 11, 0.3);
-            color: var(--text-primary);
+            color: #e2e8f0;
         }
 
         [data-theme="dark"] .alert-success {
-            background-color: rgba(16, 163, 127, 0.15);
-            border-color: rgba(16, 163, 127, 0.3);
-            color: var(--text-primary);
+            background-color: rgba(56, 189, 248, 0.1);
+            border-color: rgba(56, 189, 248, 0.25);
+            color: #e2e8f0;
+        }
+
+        /* Backdrop tint for dark mode — slightly blue */
+        [data-theme="dark"] .modal-backdrop {
+            background-color: #020617;
         }
 
         /* Bootstrap icon color adjustments */
         .text-primary {
             color: var(--accent-primary) !important;
         }
+
+        /* Message stats bar */
+        .message-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            margin-top: 8px;
+            padding: 6px 0 2px 0;
+            border-top: 1px solid var(--border-light);
+            font-size: 0.72rem;
+            color: var(--text-tertiary);
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            letter-spacing: 0.01em;
+        }
+
+        .message-stats .stat {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+
+        .message-stats .stat i {
+            font-size: 0.7rem;
+            opacity: 0.7;
+        }
+
+        .message-stats .stat-model {
+            color: var(--accent-primary);
+            opacity: 0.8;
+        }
+
+        /* History Modal */
+        .history-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-light);
+            gap: 12px;
+        }
+        .history-item:last-child { border-bottom: none; }
+        .history-item-main {
+            min-width: 0;
+            flex: 1;
+        }
+        .history-title {
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .history-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            flex-wrap: wrap;
+        }
+        .history-meta i { margin-right: 3px; }
+        .history-actions {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .history-empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-tertiary);
+        }
+        .history-empty i { font-size: 2.5rem; margin-bottom: 12px; display: block; }
     </style>
 </head>
 <body>
     <div class="chat-container">
         <!-- Sidebar -->
-        <div class="sidebar">
-            <h5>
-                <i class="bi bi-gear-fill"></i>
-                Configuration
-            </h5>
+        <div class="sidebar" id="sidebar">
 
-            <!-- Theme Toggle -->
-            <div class="theme-toggle" id="themeToggle">
-                <i class="bi bi-sun-fill" id="themeIcon"></i>
-                <span class="theme-toggle-label" id="themeLabel">Light Mode</span>
-                <div class="theme-switch">
-                    <div class="theme-switch-slider">
-                        <i class="bi bi-sun-fill" id="themeSwitchIcon"></i>
+            <!-- ── Full sidebar content (hidden when collapsed) ── -->
+            <div class="sidebar-full-content">
+
+                <div class="sidebar-header">
+                    <h5>
+                        <i class="bi bi-gear-fill"></i>
+                        Configuration
+                    </h5>
+                    <button class="sidebar-toggle-btn" id="sidebarToggle" title="Collapse sidebar">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+                </div>
+
+                <!-- Theme Toggle -->
+                <div class="theme-toggle" id="themeToggle">
+                    <i class="bi bi-sun-fill" id="themeIcon"></i>
+                    <span class="theme-toggle-label" id="themeLabel">Light Mode</span>
+                    <div class="theme-switch">
+                        <div class="theme-switch-slider">
+                            <i class="bi bi-sun-fill" id="themeSwitchIcon"></i>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- LLM Status -->
-            <div>
-                <div class="card border-0" id="llmStatusCard">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <small class="d-block">LLM Status</small>
-                                <span id="llmStatusText" class="badge bg-secondary">Checking...</span>
+                <!-- LLM Status -->
+                <div>
+                    <div class="card border-0" id="llmStatusCard">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <small class="d-block">LLM Status</small>
+                                    <span id="llmStatusText" class="badge bg-secondary">Checking...</span>
+                                </div>
+                                <i class="bi bi-circle-fill" id="llmStatusIcon" style="color: #6c757d; font-size: 0.8rem;"></i>
                             </div>
-                            <i class="bi bi-circle-fill" id="llmStatusIcon" style="color: #6c757d; font-size: 0.8rem;"></i>
-                        </div>
-                        <div id="llmModelInfo" class="mt-1" style="display: none;">
-                            <small class="d-block">Model: <strong id="activeModel"></strong></small>
-                            <small class="d-block mt-1">Server: <strong id="serverName"></strong></small>
+                            <div id="llmModelInfo" class="mt-1" style="display: none;">
+                                <small class="d-block">Model: <strong id="activeModel"></strong></small>
+                                <small class="d-block mt-1">Server: <strong id="serverName"></strong></small>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Endpoint -->
-            <div>
-                <label for="endpoint" class="form-label">
-                    <i class="bi bi-server"></i> Endpoint
-                </label>
-                <input type="text" class="form-control" id="endpoint"
-                       value="http://localhost:11434"
-                       placeholder="http://localhost:11434">
-                <small>Ollama: :11434, LM Studio: :1234</small>
-            </div>
+                <!-- Endpoint -->
+                <div>
+                    <label for="endpoint" class="form-label">
+                        <i class="bi bi-server"></i> Endpoint
+                    </label>
+                    <input type="text" class="form-control" id="endpoint"
+                           value="http://localhost:11434"
+                           placeholder="http://localhost:11434">
+                    <small>Ollama: :11434, LM Studio: :1234</small>
+                </div>
 
-            <!-- Model -->
-            <div>
-                <label for="model" class="form-label d-flex align-items-center justify-content-between">
-                    <span><i class="bi bi-cpu"></i> Model</span>
-                    <button class="btn btn-link p-0 text-decoration-none" type="button" id="modelHelpBtn" title="How to change models" style="font-size: 0.875rem;">
-                        <i class="bi bi-question-circle"></i>
+                <!-- Model -->
+                <div>
+                    <label for="model" class="form-label d-flex align-items-center justify-content-between">
+                        <span><i class="bi bi-cpu"></i> Model</span>
+                        <button class="btn btn-link p-0 text-decoration-none" type="button" id="modelHelpBtn" title="How to change models" style="font-size: 0.875rem;">
+                            <i class="bi bi-question-circle"></i>
+                        </button>
+                    </label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="model"
+                               placeholder="e.g., llama3.2, mistral">
+                        <button class="btn btn-outline-secondary" type="button" id="refreshModels" title="Refresh models">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </div>
+                    <select class="form-select mt-2" id="modelSelect" size="3" style="display:none;">
+                    </select>
+                </div>
+
+                <!-- Temperature -->
+                <div>
+                    <label for="temperature" class="form-label">
+                        <i class="bi bi-thermometer-half"></i> Temperature:
+                        <span id="temperatureValue">0.8</span>
+                    </label>
+                    <input type="range" class="form-range" id="temperature"
+                           min="0" max="2" step="0.1" value="0.8">
+                    <div class="d-flex justify-content-between small">
+                        <span>Precise</span>
+                        <span>Balanced</span>
+                        <span>Creative</span>
+                    </div>
+                </div>
+
+                <!-- System Prompt -->
+                <div>
+                    <label for="systemPrompt" class="form-label">
+                        <i class="bi bi-card-text"></i> System Prompt
+                    </label>
+                    <textarea class="form-control" id="systemPrompt" rows="4"></textarea>
+                    <small>Defines AI behavior and capabilities</small>
+                </div>
+
+                <!-- Actions -->
+                <div class="d-grid gap-2" style="margin-top: auto;">
+                    <button type="button" class="btn btn-primary btn-action" id="startLLM" style="display: none;">
+                        <i class="bi bi-play-circle"></i> Start Local LLM
                     </button>
-                </label>
-                <div class="input-group">
-                    <input type="text" class="form-control" id="model"
-                           placeholder="e.g., llama3.2, mistral">
-                    <button class="btn btn-outline-secondary" type="button" id="refreshModels" title="Refresh models">
-                        <i class="bi bi-arrow-clockwise"></i>
+                    <button type="button" class="btn btn-primary btn-action" id="saveConfig">
+                        <i class="bi bi-floppy2-fill"></i> Save Configuration
+                    </button>
+                    <button type="button" class="btn btn-danger btn-action" id="clearChat">
+                        <i class="bi bi-trash"></i> Clear Chat
+                    </button>
+                    <button type="button" class="btn btn-success btn-action" id="saveConversation">
+                        <i class="bi bi-save"></i> Save Conversation
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-action" id="showHistory">
+                        <i class="bi bi-clock-history"></i> Chat History
+                    </button>
+                    <button type="button" class="btn btn-info btn-action" id="setupLLM" data-bs-toggle="modal" data-bs-target="#setupModal">
+                        <i class="bi bi-question-circle"></i> Setup LLM
+                    </button>
+                    <button type="button" class="btn btn-warning btn-action" id="shutdownServer">
+                        <i class="bi bi-power"></i> Shutdown Server
                     </button>
                 </div>
-                <select class="form-select mt-2" id="modelSelect" size="3" style="display:none;">
-                </select>
-            </div>
 
-            <!-- Temperature -->
-            <div>
-                <label for="temperature" class="form-label">
-                    <i class="bi bi-thermometer-half"></i> Temperature:
-                    <span id="temperatureValue">0.8</span>
-                </label>
-                <input type="range" class="form-range" id="temperature"
-                       min="0" max="2" step="0.1" value="0.8">
-                <div class="d-flex justify-content-between small">
-                    <span>Precise</span>
-                    <span>Balanced</span>
-                    <span>Creative</span>
-                </div>
-            </div>
+            </div><!-- end .sidebar-full-content -->
 
-            <!-- System Prompt -->
-            <div>
-                <label for="systemPrompt" class="form-label">
-                    <i class="bi bi-card-text"></i> System Prompt
-                </label>
-                <textarea class="form-control" id="systemPrompt" rows="4"></textarea>
-                <small>Defines AI behavior and capabilities</small>
-            </div>
+            <!-- ── Collapsed icon strip ── -->
+            <div class="sidebar-icon-strip" id="sidebarIconStrip">
 
-            <!-- Actions -->
-            <div class="d-grid gap-2" style="margin-top: auto;">
-                <button type="button" class="btn btn-primary btn-action" id="startLLM" style="display: none;">
-                    <i class="bi bi-play-circle"></i> Start Local LLM
+                <!-- Expand -->
+                <button class="icon-strip-btn" id="sidebarExpand" title="Expand sidebar">
+                    <i class="bi bi-chevron-right"></i>
                 </button>
-                <button type="button" class="btn btn-danger btn-action" id="clearChat">
-                    <i class="bi bi-trash"></i> Clear Chat
+
+                <div class="icon-strip-divider"></div>
+
+                <!-- Theme -->
+                <button class="icon-strip-btn" id="themeToggleCollapsed" title="Toggle theme">
+                    <i class="bi bi-moon-fill" id="themeIconCollapsed"></i>
                 </button>
-                <button type="button" class="btn btn-success btn-action" id="saveConversation">
-                    <i class="bi bi-save"></i> Save Conversation
+
+                <!-- LLM status dot -->
+                <div class="icon-strip-status-dot" id="statusDotCollapsed" title="LLM Status"></div>
+
+                <div class="icon-strip-divider"></div>
+
+                <!-- Start LLM (only when stopped) -->
+                <button class="icon-strip-btn icon-success" id="startLLMCollapsed" title="Start Local LLM" style="display:none;">
+                    <i class="bi bi-play-circle"></i>
                 </button>
-                <button type="button" class="btn btn-info btn-action" id="setupLLM" data-bs-toggle="modal" data-bs-target="#setupModal">
-                    <i class="bi bi-question-circle"></i> Setup LLM
+
+                <!-- Save Config -->
+                <button class="icon-strip-btn icon-primary" id="saveConfigCollapsed" title="Save Configuration">
+                    <i class="bi bi-floppy2-fill"></i>
                 </button>
-                <button type="button" class="btn btn-warning btn-action" id="shutdownServer">
-                    <i class="bi bi-power"></i> Shutdown Server
+
+                <!-- Clear -->
+                <button class="icon-strip-btn icon-danger" id="clearChatCollapsed" title="Clear Chat">
+                    <i class="bi bi-trash"></i>
                 </button>
-            </div>
-        </div>
+
+                <!-- Save -->
+                <button class="icon-strip-btn icon-success" id="saveConvCollapsed" title="Save Conversation">
+                    <i class="bi bi-save"></i>
+                </button>
+
+                <!-- History -->
+                <button class="icon-strip-btn" id="showHistoryCollapsed" title="Chat History">
+                    <i class="bi bi-clock-history"></i>
+                </button>
+
+                <!-- Setup -->
+                <button class="icon-strip-btn" id="setupLLMCollapsed" title="Setup LLM"
+                        data-bs-toggle="modal" data-bs-target="#setupModal">
+                    <i class="bi bi-question-circle"></i>
+                </button>
+
+                <!-- Shutdown -->
+                <button class="icon-strip-btn icon-warning" id="shutdownCollapsed" title="Shutdown Server">
+                    <i class="bi bi-power"></i>
+                </button>
+
+            </div><!-- end .sidebar-icon-strip -->
+
+        </div><!-- end .sidebar -->
 
         <!-- Main Chat Area -->
         <div class="chat-main">
@@ -1399,10 +1762,34 @@ ollama pull dolphin-mistral</code></pre>
         </div>
     </div>
 
+    <!-- History Modal -->
+    <div class="modal fade" id="historyModal" tabindex="-1" aria-labelledby="historyModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header d-flex align-items-center">
+                    <h5 class="modal-title" id="historyModalLabel">
+                        <i class="bi bi-clock-history"></i> Chat History
+                    </h5>
+                    <button type="button" class="btn btn-sm btn-outline-danger ms-auto me-2" id="deleteAllConversations">
+                        <i class="bi bi-trash3"></i> Delete All
+                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="historyModalBody">
+                    <div class="history-empty">
+                        <i class="bi bi-clock-history"></i>
+                        <p>No saved conversations yet.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
         let conversationHistory = [];
+        let currentConversationId = null;
 
         // Theme Management
         function getTheme() {
@@ -1414,6 +1801,7 @@ ollama pull dolphin-mistral</code></pre>
             document.documentElement.setAttribute('data-theme', theme);
             if (document.readyState === 'loading') return;
             updateThemeUI(theme);
+            syncCollapsedThemeIcon(theme);
             saveSettings();
         }
 
@@ -1444,6 +1832,36 @@ ollama pull dolphin-mistral</code></pre>
             setTheme(newTheme);
         }
 
+        // ── Sidebar collapse ───────────────────────────────────────────────────
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const isCollapsed = sidebar.classList.toggle('collapsed');
+            localStorage.setItem('sidebarCollapsed', isCollapsed);
+        }
+
+        function syncCollapsedThemeIcon(theme) {
+            const icon = document.getElementById('themeIconCollapsed');
+            if (!icon) return;
+            icon.className = theme === 'dark' ? 'bi bi-moon-fill' : 'bi bi-sun-fill';
+        }
+
+        function syncCollapsedStatusDot(status) {
+            const dot = document.getElementById('statusDotCollapsed');
+            if (!dot) return;
+            if (status.running) {
+                dot.style.background = '#28a745';
+                dot.title = 'LLM Running';
+            } else if (status.installed) {
+                dot.style.background = '#ffc107';
+                dot.title = 'LLM Stopped';
+            } else {
+                dot.style.background = '#dc3545';
+                dot.title = 'LLM Not Installed';
+            }
+            const startBtn = document.getElementById('startLLMCollapsed');
+            if (startBtn) startBtn.style.display = status.installed && !status.running ? 'flex' : 'none';
+        }
+
         // Apply saved theme to document immediately to prevent flash
         (function() {
             const savedTheme = localStorage.getItem('theme') || 'dark';
@@ -1453,22 +1871,58 @@ ollama pull dolphin-mistral</code></pre>
         // ── Settings persistence ───────────────────────────────────────────────
         let _saveTimer = null;
 
+        function collectSettings() {
+            return {
+                endpoint:      document.getElementById('endpoint').value,
+                model:         document.getElementById('model').value,
+                temperature:   parseFloat(document.getElementById('temperature').value),
+                theme:         getTheme(),
+                system_prompt: document.getElementById('systemPrompt').value,
+            };
+        }
+
         function saveSettings() {
             clearTimeout(_saveTimer);
             _saveTimer = setTimeout(() => {
-                const settings = {
-                    endpoint:      document.getElementById('endpoint').value,
-                    model:         document.getElementById('model').value,
-                    temperature:   parseFloat(document.getElementById('temperature').value),
-                    theme:         getTheme(),
-                    system_prompt: document.getElementById('systemPrompt').value,
-                };
                 fetch('/api/settings', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(settings),
+                    body: JSON.stringify(collectSettings()),
                 }).catch(err => console.error('Error saving settings:', err));
             }, 600);
+        }
+
+        async function saveConfigNow(btn) {
+            const original = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
+            try {
+                const resp = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(collectSettings()),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    btn.innerHTML = '<i class="bi bi-check-lg"></i> Saved!';
+                    btn.classList.replace('btn-primary', 'btn-success');
+                    setTimeout(() => {
+                        btn.innerHTML = original;
+                        btn.classList.replace('btn-success', 'btn-primary');
+                        btn.disabled = false;
+                    }, 1500);
+                } else {
+                    throw new Error(data.error || 'Unknown error');
+                }
+            } catch (err) {
+                btn.innerHTML = '<i class="bi bi-x-lg"></i> Failed';
+                btn.classList.replace('btn-primary', 'btn-danger');
+                setTimeout(() => {
+                    btn.innerHTML = original;
+                    btn.classList.replace('btn-danger', 'btn-primary');
+                    btn.disabled = false;
+                }, 2000);
+            }
         }
 
         async function loadSettings() {
@@ -1569,6 +2023,7 @@ ollama pull dolphin-mistral</code></pre>
 
         // Update LLM status UI
         function updateLLMStatusUI(status) {
+            syncCollapsedStatusDot(status);
             const statusText = document.getElementById('llmStatusText');
             const statusIcon = document.getElementById('llmStatusIcon');
             const modelInfo = document.getElementById('llmModelInfo');
@@ -1656,6 +2111,36 @@ ollama pull dolphin-mistral</code></pre>
         document.addEventListener('DOMContentLoaded', async function() {
             // Update theme UI now that DOM is ready
             updateThemeUI(getTheme());
+            syncCollapsedThemeIcon(getTheme());
+
+            // Restore sidebar collapsed state
+            if (localStorage.getItem('sidebarCollapsed') === 'true') {
+                document.getElementById('sidebar').classList.add('collapsed');
+            }
+
+            // Sidebar toggle buttons
+            document.getElementById('sidebarToggle').addEventListener('click', toggleSidebar);
+            document.getElementById('sidebarExpand').addEventListener('click', toggleSidebar);
+
+            // Save Configuration button
+            document.getElementById('saveConfig').addEventListener('click', function() {
+                saveConfigNow(this);
+            });
+            document.getElementById('saveConfigCollapsed').addEventListener('click', function() {
+                saveConfigNow(document.getElementById('saveConfig'));
+            });
+
+            // Collapsed icon strip — wire to same actions as full buttons
+            document.getElementById('themeToggleCollapsed').addEventListener('click', toggleTheme);
+            document.getElementById('clearChatCollapsed').addEventListener('click', () =>
+                document.getElementById('clearChat').click());
+            document.getElementById('saveConvCollapsed').addEventListener('click', () =>
+                document.getElementById('saveConversation').click());
+            document.getElementById('showHistoryCollapsed').addEventListener('click', openHistoryModal);
+            document.getElementById('shutdownCollapsed').addEventListener('click', () =>
+                document.getElementById('shutdownServer').click());
+            document.getElementById('startLLMCollapsed').addEventListener('click', () =>
+                document.getElementById('startLLM').click());
 
             // Load persisted settings from server (fills endpoint, model, temp, prompt, theme)
             await loadSettings();
@@ -1712,6 +2197,7 @@ ollama pull dolphin-mistral</code></pre>
             document.getElementById('clearChat').addEventListener('click', function() {
                 if (confirm('Clear all messages?')) {
                     conversationHistory = [];
+                    currentConversationId = null;
                     const messages = document.getElementById('messages');
                     messages.innerHTML = `
                         <div class="empty-state">
@@ -1722,23 +2208,26 @@ ollama pull dolphin-mistral</code></pre>
                 }
             });
 
-            // Save conversation
+            // Save conversation (manual — also updates currentConversationId)
             document.getElementById('saveConversation').addEventListener('click', async function() {
                 if (conversationHistory.length === 0) {
                     alert('No messages to save');
                     return;
                 }
-
                 try {
                     const response = await fetch('/api/save_conversation', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ messages: conversationHistory })
+                        body: JSON.stringify({
+                            id: currentConversationId,
+                            messages: conversationHistory,
+                            model: document.getElementById('model').value,
+                            endpoint: document.getElementById('endpoint').value,
+                        })
                     });
-
                     const data = await response.json();
-
                     if (data.success) {
+                        currentConversationId = data.id;
                         alert(`Conversation saved to:\n${data.path}`);
                     } else {
                         alert('Error saving: ' + data.error);
@@ -1747,6 +2236,10 @@ ollama pull dolphin-mistral</code></pre>
                     alert('Error saving conversation: ' + error.message);
                 }
             });
+
+            // Chat History button
+            document.getElementById('showHistory').addEventListener('click', openHistoryModal);
+            document.getElementById('deleteAllConversations').addEventListener('click', deleteAllConversations);
 
             // Shutdown server
             document.getElementById('shutdownServer').addEventListener('click', async function() {
@@ -1777,7 +2270,195 @@ ollama pull dolphin-mistral</code></pre>
             });
         });
 
-        function addMessage(role, content) {
+        // ── Auto-save conversation ─────────────────────────────────────────────
+        async function autoSaveConversation() {
+            if (conversationHistory.length < 2) return;
+            const model    = document.getElementById('model').value;
+            const endpoint = document.getElementById('endpoint').value;
+            try {
+                const resp = await fetch('/api/save_conversation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: currentConversationId,
+                        messages: conversationHistory,
+                        model,
+                        endpoint,
+                    }),
+                });
+                const data = await resp.json();
+                if (data.success) currentConversationId = data.id;
+            } catch (err) {
+                console.error('Auto-save failed:', err);
+            }
+        }
+
+        // ── Chat History ───────────────────────────────────────────────────────
+        function formatHistoryDate(iso) {
+            if (!iso) return '';
+            const d = new Date(iso);
+            return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+                 + ' ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+        }
+
+        async function openHistoryModal() {
+            const body = document.getElementById('historyModalBody');
+            body.innerHTML = '<div class="text-center py-4"><div class="spinner-border spinner-border-sm"></div> Loading...</div>';
+            const modal = new bootstrap.Modal(document.getElementById('historyModal'));
+            modal.show();
+
+            try {
+                const resp = await fetch('/api/conversations');
+                const data = await resp.json();
+                const list = data.conversations || [];
+
+                if (list.length === 0) {
+                    body.innerHTML = `
+                        <div class="history-empty">
+                            <i class="bi bi-clock-history"></i>
+                            <p>No saved conversations yet.<br>
+                            <small>Conversations are auto-saved after each reply.</small></p>
+                        </div>`;
+                    return;
+                }
+
+                const currentModel = document.getElementById('model').value;
+                body.innerHTML = '';
+                list.forEach(conv => {
+                    const crossModel = conv.origin_model && currentModel && conv.origin_model !== currentModel;
+                    const item = document.createElement('div');
+                    item.className = 'history-item';
+                    item.id = `history-item-${conv.id}`;
+                    item.innerHTML = `
+                        <div class="history-item-main">
+                            <div class="history-title">${escapeHtml(conv.title)}</div>
+                            <div class="history-meta">
+                                ${conv.origin_model ? `<span><i class="bi bi-cpu"></i>${escapeHtml(conv.origin_model)}</span>` : ''}
+                                <span><i class="bi bi-calendar3"></i>${formatHistoryDate(conv.updated_at)}</span>
+                                <span><i class="bi bi-chat-left-dots"></i>${conv.message_count} messages</span>
+                                ${crossModel ? `<span class="text-warning"><i class="bi bi-arrow-repeat"></i>will continue with ${escapeHtml(currentModel)}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="history-actions">
+                            <button class="btn btn-sm btn-primary" data-action="load" data-id="${conv.id}">
+                                <i class="bi bi-box-arrow-in-right"></i> Load
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" data-action="delete" data-id="${conv.id}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>`;
+                    body.appendChild(item);
+                });
+
+                // Event delegation on the body
+                body.onclick = function(e) {
+                    const btn = e.target.closest('[data-action]');
+                    if (!btn) return;
+                    const id = btn.dataset.id;
+                    if (btn.dataset.action === 'load') loadConversation(id);
+                    if (btn.dataset.action === 'delete') {
+                        deleteConversation(id, document.getElementById(`history-item-${id}`));
+                    }
+                };
+
+            } catch (err) {
+                body.innerHTML = `<div class="text-danger p-3">Error loading history: ${err.message}</div>`;
+            }
+        }
+
+        async function loadConversation(convId) {
+            try {
+                const resp = await fetch(`/api/conversations/${convId}`);
+                const data = await resp.json();
+                if (data.error) { alert('Error loading conversation: ' + data.error); return; }
+
+                const currentModel = document.getElementById('model').value;
+
+                if (conversationHistory.length > 0) {
+                    if (!confirm('Load this conversation? Your current chat will be replaced.')) return;
+                }
+
+                // Clear UI
+                document.getElementById('messages').innerHTML = `
+                    <div class="empty-state">
+                        <i class="bi bi-chat-left-text"></i>
+                        <p>Start a conversation with your local LLM...</p>
+                    </div>`;
+
+                // Restore state
+                conversationHistory = data.messages || [];
+                currentConversationId = convId;
+
+                // Re-render all messages
+                conversationHistory.forEach(msg => addMessage(msg.role, msg.content));
+
+                // Cross-model notification
+                if (data.origin_model && currentModel && data.origin_model !== currentModel) {
+                    const statusEl = document.getElementById('status');
+                    statusEl.textContent = `Loaded from ${data.origin_model} — continuing with ${currentModel}`;
+                    setTimeout(() => { statusEl.textContent = 'Ready'; }, 5000);
+                }
+
+                // Close modal
+                bootstrap.Modal.getInstance(document.getElementById('historyModal')).hide();
+
+            } catch (err) {
+                alert('Error loading conversation: ' + err.message);
+            }
+        }
+
+        async function deleteConversation(convId, rowEl) {
+            if (!confirm('Delete this conversation?')) return;
+            try {
+                const resp = await fetch(`/api/conversations/${convId}`, { method: 'DELETE' });
+                const data = await resp.json();
+                if (data.success) {
+                    rowEl.remove();
+                    // Show empty state if no items left
+                    const body = document.getElementById('historyModalBody');
+                    if (!body.querySelector('.history-item')) {
+                        body.innerHTML = `
+                            <div class="history-empty">
+                                <i class="bi bi-clock-history"></i>
+                                <p>No saved conversations yet.</p>
+                            </div>`;
+                    }
+                    // If we deleted the active conversation, reset id
+                    if (currentConversationId === convId) currentConversationId = null;
+                } else {
+                    alert('Delete failed: ' + data.error);
+                }
+            } catch (err) {
+                alert('Error deleting: ' + err.message);
+            }
+        }
+
+        async function deleteAllConversations() {
+            if (!confirm('Delete ALL saved conversations? This cannot be undone.')) return;
+            try {
+                const resp = await fetch('/api/conversations', { method: 'DELETE' });
+                const data = await resp.json();
+                if (data.success) {
+                    document.getElementById('historyModalBody').innerHTML = `
+                        <div class="history-empty">
+                            <i class="bi bi-clock-history"></i>
+                            <p>No saved conversations yet.</p>
+                        </div>`;
+                    currentConversationId = null;
+                } else {
+                    alert('Delete failed: ' + data.error);
+                }
+            } catch (err) {
+                alert('Error deleting all: ' + err.message);
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function addMessage(role, content, usage = null) {
             const messagesContainer = document.getElementById('messages');
 
             // Remove empty state
@@ -1817,6 +2498,27 @@ ollama pull dolphin-mistral</code></pre>
                     }, 2000);
                 };
                 contentDiv.appendChild(copyBtn);
+
+                // Stats bar
+                if (usage) {
+                    const stats = document.createElement('div');
+                    stats.className = 'message-stats';
+
+                    const durationSec = (usage.duration_ms / 1000).toFixed(1);
+                    const tokStr = usage.total_tokens
+                        ? `${usage.total_tokens} tokens (${usage.prompt_tokens} prompt + ${usage.completion_tokens} completion)`
+                        : '';
+                    const tpsStr = usage.tokens_per_sec ? `${usage.tokens_per_sec} tok/s` : '';
+                    const modelStr = usage.model || '';
+
+                    stats.innerHTML = `
+                        <span class="stat"><i class="bi bi-clock"></i> ${durationSec}s</span>
+                        ${tokStr ? `<span class="stat"><i class="bi bi-hash"></i> ${tokStr}</span>` : ''}
+                        ${tpsStr ? `<span class="stat"><i class="bi bi-lightning-charge"></i> ${tpsStr}</span>` : ''}
+                        ${modelStr ? `<span class="stat stat-model"><i class="bi bi-cpu"></i> ${modelStr}</span>` : ''}
+                    `;
+                    wrapper.appendChild(stats);
+                }
             } else {
                 contentDiv.textContent = content;
             }
@@ -1912,8 +2614,11 @@ ollama pull dolphin-mistral</code></pre>
                 }
 
                 // Add assistant response
-                addMessage('assistant', data.response);
+                addMessage('assistant', data.response, data.usage || null);
                 conversationHistory.push({ role: 'assistant', content: data.response });
+
+                // Auto-save after each Q&A pair
+                autoSaveConversation();
 
                 document.getElementById('status').textContent = 'Ready';
 

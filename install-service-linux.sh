@@ -361,6 +361,25 @@ if [ ! -f "$EXECUTABLE" ]; then
     exit 1
 fi
 
+# Install update-models script
+if [ -f "${SOURCE_DIR}/update-models.sh" ]; then
+    info "Installing update-models.sh..."
+    if [ "$INSTALL_MODE" = "system" ]; then
+        sudo cp "${SOURCE_DIR}/update-models.sh" "${INSTALL_DIR}/update-models.sh"
+        sudo chmod +x "${INSTALL_DIR}/update-models.sh"
+        # Symlink into a PATH location so it's available system-wide
+        sudo ln -sf "${INSTALL_DIR}/update-models.sh" /usr/local/bin/ollama-update-models
+        ok "update-models.sh installed — run: ollama-update-models"
+    else
+        cp "${SOURCE_DIR}/update-models.sh" "${INSTALL_DIR}/update-models.sh"
+        chmod +x "${INSTALL_DIR}/update-models.sh"
+        # Symlink into user bin
+        mkdir -p "${HOME}/.local/bin"
+        ln -sf "${INSTALL_DIR}/update-models.sh" "${HOME}/.local/bin/ollama-update-models"
+        ok "update-models.sh installed — run: ollama-update-models"
+    fi
+fi
+
 # ── Create systemd service ─────────────────────────────────────────────────────
 step "Creating systemd service"
 
@@ -542,9 +561,11 @@ else
 fi
 echo
 echo -e "  ${BOLD}Ollama:${NC}"
-echo "    Status:   sudo systemctl status ollama"
-echo "    Models:   ollama list"
-echo "    Pull:     ollama pull llama3.2"
+echo "    Status:         sudo systemctl status ollama"
+echo "    Models:         ollama list"
+echo "    Pull:           ollama pull llama3.2"
+echo "    Update all:     ollama-update-models"
+echo "    Schedule auto:  ollama-update-models --install-timer"
 echo
 echo -e "  ${BOLD}Uninstall:${NC}"
 echo "    ./install-service-linux.sh --uninstall"

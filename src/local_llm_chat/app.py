@@ -14,6 +14,7 @@ Then navigate to http://localhost:5000 in your browser.
 import os
 import json
 import logging
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -190,7 +191,10 @@ class LocalLLMChat:
                 if response.get("error"):
                     return jsonify(response), 500
 
-                return jsonify({"response": response.get("content", "")})
+                return jsonify({
+                    "response": response.get("content", ""),
+                    "usage": response.get("usage"),
+                })
 
             except Exception as e:
                 logger.error(f"Error in chat endpoint: {e}")
@@ -209,7 +213,7 @@ class LocalLLMChat:
 
         @self.app.route("/api/save_conversation", methods=["POST"])
         def save_conversation():
-            """Save conversation to file."""
+            """Save or update a conversation file (upsert by id)."""
             try:
                 data = request.json
                 messages = data.get("messages", [])
@@ -217,25 +221,58 @@ class LocalLLMChat:
                 if not messages:
                     return jsonify({"error": "No messages to save"}), 400
 
-                # Generate filename
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                filename = f"conversation_{timestamp}.json"
-                filepath = self.storage_dir / filename
+                conv_id = data.get("id")
+                model = data.get("model", "")
+                endpoint = data.get("endpoint", "")
+                now = datetime.now().isoformat()
 
-                # Save to file
-                with open(filepath, "w") as f:
-                    json.dump(
-                        {
-                            "timestamp": datetime.now().isoformat(),
+                # Derive title from first user message
+                title = next(
+                    (
+                        (m["content"][:60] + ("..." if len(m["content"]) > 60 else ""))
+                        for m in messages
+                        if m.get("role") == "user"
+                    ),
+                    "Conversation",
+                )
+
+                if conv_id:
+                    filepath = self.storage_dir / f"conversation_{conv_id}.json"
+                    if filepath.exists():
+                        with open(filepath, "r") as f:
+                            existing = json.load(f)
+                        existing["updated_at"] = now
+                        existing["messages"] = messages
+                        conv_data = existing
+                    else:
+                        conv_data = {
+                            "id": conv_id,
+                            "title": title,
+                            "created_at": now,
+                            "updated_at": now,
+                            "origin_model": model,
+                            "origin_endpoint": endpoint,
                             "messages": messages,
-                        },
-                        f,
-                        indent=2,
-                    )
+                        }
+                else:
+                    conv_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    conv_data = {
+                        "id": conv_id,
+                        "title": title,
+                        "created_at": now,
+                        "updated_at": now,
+                        "origin_model": model,
+                        "origin_endpoint": endpoint,
+                        "messages": messages,
+                    }
 
-                logger.info(f"Saved conversation to {filepath}")
+                filepath = self.storage_dir / f"conversation_{conv_id}.json"
+                with open(filepath, "w") as f:
+                    json.dump(conv_data, f, indent=2)
+
+                logger.info(f"Saved conversation {conv_id} to {filepath}")
                 return jsonify(
-                    {"success": True, "filename": filename, "path": str(filepath)}
+                    {"success": True, "id": conv_id, "filename": filepath.name, "path": str(filepath)}
                 )
 
             except Exception as e:
@@ -244,29 +281,73 @@ class LocalLLMChat:
 
         @self.app.route("/api/conversations", methods=["GET"])
         def list_conversations():
-            """List saved conversations."""
+            """List saved conversations, newest first by updated_at."""
             try:
                 conversations = []
-                for filepath in sorted(
-                    self.storage_dir.glob("conversation_*.json"), reverse=True
-                ):
+                for filepath in self.storage_dir.glob("conversation_*.json"):
                     try:
                         with open(filepath, "r") as f:
                             data = json.load(f)
-                            conversations.append(
-                                {
-                                    "filename": filepath.name,
-                                    "timestamp": data.get("timestamp"),
-                                    "message_count": len(data.get("messages", [])),
-                                }
-                            )
+                        conversations.append(
+                            {
+                                "id": data.get("id", filepath.stem.replace("conversation_", "")),
+                                "title": data.get("title", filepath.stem),
+                                "created_at": data.get("created_at", data.get("timestamp", "")),
+                                "updated_at": data.get("updated_at", data.get("timestamp", "")),
+                                "origin_model": data.get("origin_model", ""),
+                                "message_count": len(data.get("messages", [])),
+                            }
+                        )
                     except Exception as e:
                         logger.error(f"Error reading {filepath}: {e}")
 
+                conversations.sort(key=lambda x: x.get("updated_at", ""), reverse=True)
                 return jsonify({"conversations": conversations})
 
             except Exception as e:
                 logger.error(f"Error listing conversations: {e}")
+                return jsonify({"error": str(e)}), 500
+
+        @self.app.route("/api/conversations/<conv_id>", methods=["GET"])
+        def get_conversation(conv_id):
+            """Load a single conversation by id."""
+            try:
+                filepath = self.storage_dir / f"conversation_{conv_id}.json"
+                if not filepath.exists():
+                    return jsonify({"error": "Conversation not found"}), 404
+                with open(filepath, "r") as f:
+                    data = json.load(f)
+                return jsonify(data)
+            except Exception as e:
+                logger.error(f"Error loading conversation {conv_id}: {e}")
+                return jsonify({"error": str(e)}), 500
+
+        @self.app.route("/api/conversations/<conv_id>", methods=["DELETE"])
+        def delete_conversation(conv_id):
+            """Delete a single conversation by id."""
+            try:
+                filepath = self.storage_dir / f"conversation_{conv_id}.json"
+                if not filepath.exists():
+                    return jsonify({"error": "Conversation not found"}), 404
+                filepath.unlink()
+                logger.info(f"Deleted conversation {conv_id}")
+                return jsonify({"success": True})
+            except Exception as e:
+                logger.error(f"Error deleting conversation {conv_id}: {e}")
+                return jsonify({"error": str(e)}), 500
+
+        @self.app.route("/api/conversations", methods=["DELETE"])
+        def delete_all_conversations():
+            """Delete all saved conversations."""
+            try:
+                count = 0
+                for filepath in self.storage_dir.glob("conversation_*.json"):
+                    filepath.unlink()
+                    count += 1
+                logger.info(f"Deleted {count} conversations")
+                return jsonify({"success": True, "deleted": count})
+            except Exception as e:
+                logger.error(f"Error deleting all conversations: {e}")
                 return jsonify({"error": str(e)}), 500
 
         @self.app.route("/api/settings", methods=["GET"])
@@ -385,12 +466,14 @@ class LocalLLMChat:
 
             logger.info(f"Calling {api_url} with model {model}")
 
+            t_start = time.time()
             response = requests.post(
                 api_url,
                 json=payload,
                 headers={"Content-Type": "application/json"},
                 timeout=120,
             )
+            elapsed_ms = (time.time() - t_start) * 1000
 
             if response.status_code != 200:
                 error_msg = f"LLM API returned status {response.status_code}: {response.text}"
@@ -399,10 +482,25 @@ class LocalLLMChat:
 
             response_data = response.json()
 
-            # Extract content based on API type
+            # Extract content and usage stats based on API type
             if "11434" in endpoint or "ollama" in endpoint.lower():
                 # Ollama response format
                 content = response_data.get("message", {}).get("content", "")
+
+                prompt_tokens = response_data.get("prompt_eval_count", 0)
+                completion_tokens = response_data.get("eval_count", 0)
+                total_tokens = prompt_tokens + completion_tokens
+
+                # Ollama reports durations in nanoseconds; use total_duration for
+                # wall-clock time and eval_duration for tokens/sec calculation.
+                total_ns = response_data.get("total_duration", 0)
+                eval_ns = response_data.get("eval_duration", 0)
+                duration_ms = total_ns / 1_000_000 if total_ns else elapsed_ms
+                tokens_per_sec = (
+                    round(completion_tokens / (eval_ns / 1_000_000_000), 1)
+                    if eval_ns and completion_tokens
+                    else None
+                )
             else:
                 # OpenAI-compatible response format
                 content = (
@@ -410,8 +508,28 @@ class LocalLLMChat:
                     .get("message", {})
                     .get("content", "")
                 )
+                usage = response_data.get("usage", {})
+                prompt_tokens = usage.get("prompt_tokens", 0)
+                completion_tokens = usage.get("completion_tokens", 0)
+                total_tokens = usage.get("total_tokens", prompt_tokens + completion_tokens)
+                duration_ms = elapsed_ms
+                tokens_per_sec = (
+                    round(total_tokens / (elapsed_ms / 1000), 1)
+                    if elapsed_ms and total_tokens
+                    else None
+                )
 
-            return {"content": content}
+            return {
+                "content": content,
+                "usage": {
+                    "model": response_data.get("model", model),
+                    "prompt_tokens": prompt_tokens,
+                    "completion_tokens": completion_tokens,
+                    "total_tokens": total_tokens,
+                    "duration_ms": round(duration_ms),
+                    "tokens_per_sec": tokens_per_sec,
+                },
+            }
 
         except requests.exceptions.RequestException as e:
             error_msg = f"Error connecting to LLM endpoint: {str(e)}"
