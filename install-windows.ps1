@@ -194,7 +194,7 @@ if (-not $ollamaInstalled) {
         }
 }
 
-# Step 3: Download dolphin-mistral model (automatic)
+# Step 3: Download a model (optional)
 if ($ollamaInstalled) {
     Write-Header "Model Installation"
 
@@ -209,48 +209,50 @@ if ($ollamaInstalled) {
     try {
         $models = & $ollamaCmd list 2>&1
         $modelsList = $models | Out-String
-        $hasAnyModel = ($modelsList -match "\S") -and (-not ($modelsList -match "^NAME"))
-        $hasDolphin = $modelsList -match "dolphin-mistral"
+        # The header line is "NAME  ID  SIZE  MODIFIED" — skip it to detect real models
+        $modelLines = ($models | Select-Object -Skip 1) | Where-Object { $_ -match '\S' }
+        $hasAnyModel = ($modelLines.Count -gt 0)
 
-        if ($hasDolphin) {
-            Write-Success "dolphin-mistral model is already installed"
-        }
-        elseif ($hasAnyModel) {
-            Write-Success "Found existing models installed"
-            Write-Info "dolphin-mistral is recommended but you have other models available"
-            $response = Read-Host "Would you like to also install dolphin-mistral? (y/n)"
-
+        if ($hasAnyModel) {
+            Write-Success "Existing models found:"
+            & $ollamaCmd list
+            Write-Host ""
+            $response = Read-Host "Would you like to pull an additional model? (y/n)"
             if ($response -eq 'y' -or $response -eq 'Y') {
-                Write-Info "Downloading dolphin-mistral model..."
-                Write-Warning-Custom "Download size: ~4GB, this may take 5-10 minutes"
-                Write-Info "Please be patient, the download is happening..."
-
-                & $ollamaCmd pull dolphin-mistral
-
-                if ($LASTEXITCODE -eq 0) {
-                    Write-Success "dolphin-mistral model downloaded successfully"
-                }
-                else {
-                    Write-ErrorMsg "Model download failed"
+                $modelName = Read-Host "Model name (e.g. llama3.2, mistral, gemma3)"
+                if ($modelName) {
+                    Write-Info "Downloading $modelName..."
+                    & $ollamaCmd pull $modelName
+                    if ($LASTEXITCODE -eq 0) {
+                        Write-Success "$modelName downloaded successfully"
+                    } else {
+                        Write-ErrorMsg "Download failed"
+                    }
                 }
             }
         }
         else {
-            Write-Warning-Custom "No models found. dolphin-mistral will be installed automatically"
-            Write-Info "This model is recommended for uncensored responses"
-            Write-Warning-Custom "Download size: ~4GB, this may take 5-10 minutes"
-            Write-Info "Please be patient, the download is happening..."
+            Write-Warning-Custom "No models found. At least one model is required."
+            Write-Info "Recommended starting model: llama3.2 (~2 GB)"
+            Write-Info "Browse all models at: https://ollama.com/library"
+            Write-Host ""
+            $response = Read-Host "Would you like to install llama3.2 now? (y/n)"
 
-            & $ollamaCmd pull dolphin-mistral
+            if ($response -eq 'y' -or $response -eq 'Y') {
+                Write-Info "Downloading llama3.2 (~2 GB, this may take a few minutes)..."
+                & $ollamaCmd pull llama3.2
 
-            if ($LASTEXITCODE -eq 0) {
-                Write-Success "dolphin-mistral model downloaded successfully"
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Success "llama3.2 downloaded successfully"
+                }
+                else {
+                    Write-ErrorMsg "Download failed"
+                    Write-Info "You can pull a model later from the UI or with: ollama pull llama3.2"
+                    Read-Host "Press Enter to continue anyway"
+                }
             }
             else {
-                Write-ErrorMsg "Model download failed"
-                Write-ErrorMsg "LocalLLMChat requires at least one model to function"
-                Write-Info "You can download it manually later with: ollama pull dolphin-mistral"
-                Read-Host "Press Enter to continue anyway"
+                Write-Info "Skipping model download. Pull one later with: ollama pull llama3.2"
             }
         }
 
@@ -450,30 +452,18 @@ Write-Success "LocalLLMChat has been installed successfully!"
 Write-Host ""
 
 if ($ollamaInstalled) {
-    Write-Info "Ollama Configuration:"
-    Write-Host "   Endpoint: http://localhost:11434"
-
-    # Check if dolphin-mistral is available
-    try {
-        $ollamaCmd = if (Test-Path $ollamaPath) { $ollamaPath } else { "ollama" }
-        $models = & $ollamaCmd list 2>&1
-        if ($models -match "dolphin-mistral") {
-            Write-Host "   Model: dolphin-mistral"
-        }
-        else {
-            Write-Host "   Model: (first available model)"
-        }
-    }
-    catch {
-        Write-Host "   Model: (check Ollama)"
-    }
+    Write-Info "Ollama:"
+    Write-Host "   Endpoint:  http://localhost:11434"
+    Write-Host "   List:      ollama list"
+    Write-Host "   Pull:      ollama pull llama3.2"
+    Write-Host "   Update:    update-models.sh (requires WSL or Git Bash)"
 }
 
 Write-Host ""
 Write-Info "For detailed setup instructions, see SETUP.md"
 Write-Info "For usage information, see README.md"
 Write-Host ""
-Write-Success "Happy chatting! 🎉"
+Write-Success "Happy chatting!"
 Write-Host ""
 
 Read-Host "Press Enter to exit (LocalLLMChat will continue running)"

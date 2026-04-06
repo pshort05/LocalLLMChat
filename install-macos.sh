@@ -186,7 +186,7 @@ if command -v ollama &> /dev/null; then
     fi
 fi
 
-# Step 4: Download dolphin-mistral model (automatic)
+# Step 4: Download a model (optional)
 if command -v ollama &> /dev/null; then
     print_header "Model Installation"
 
@@ -196,42 +196,41 @@ if command -v ollama &> /dev/null; then
 
     # Check if any models are already installed
     EXISTING_MODELS=$(ollama list 2>/dev/null | tail -n +2)
-    HAS_DOLPHIN=$(echo "$EXISTING_MODELS" | grep -q "dolphin-mistral" && echo "yes" || echo "no")
     HAS_ANY_MODEL=$(echo "$EXISTING_MODELS" | grep -q "." && echo "yes" || echo "no")
 
-    if [ "$HAS_DOLPHIN" = "yes" ]; then
-        print_success "dolphin-mistral model is already installed"
-    elif [ "$HAS_ANY_MODEL" = "yes" ]; then
-        print_success "Found existing models installed"
-        print_info "dolphin-mistral is recommended but you have other models available"
-        read -p "Would you like to also install dolphin-mistral? (y/n): " -n 1 -r
+    if [ "$HAS_ANY_MODEL" = "yes" ]; then
+        print_success "Existing models found:"
+        ollama list 2>/dev/null
+        echo
+        read -p "Would you like to pull an additional model? (y/n): " -n 1 -r
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            print_info "Downloading dolphin-mistral model..."
-            print_warning "Download size: ~4GB, this may take 5-10 minutes"
-            print_info "Please be patient..."
-            ollama pull dolphin-mistral
-
-            if [ $? -eq 0 ]; then
-                print_success "dolphin-mistral model downloaded successfully"
-            else
-                print_error "Model download failed"
+            read -p "Model name (e.g. llama3.2, mistral, gemma3): " MODEL_NAME
+            if [ -n "$MODEL_NAME" ]; then
+                print_info "Downloading $MODEL_NAME..."
+                ollama pull "$MODEL_NAME"
+                [ $? -eq 0 ] && print_success "$MODEL_NAME downloaded" || print_error "Download failed"
             fi
         fi
     else
-        print_warning "No models found. dolphin-mistral will be installed automatically"
-        print_info "This model is recommended for uncensored responses"
-        print_warning "Download size: ~4GB, this may take 5-10 minutes"
-        print_info "Please be patient..."
-        ollama pull dolphin-mistral
+        print_warning "No models found. At least one model is required."
+        print_info "Recommended starting model: llama3.2 (~2 GB)"
+        print_info "Browse all models at: https://ollama.com/library"
+        echo
+        read -p "Would you like to install llama3.2 now? (y/n): " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            print_info "Downloading llama3.2 (~2 GB, this may take a few minutes)..."
+            ollama pull llama3.2
 
-        if [ $? -eq 0 ]; then
-            print_success "dolphin-mistral model downloaded successfully"
+            if [ $? -eq 0 ]; then
+                print_success "llama3.2 downloaded successfully"
+            else
+                print_error "Download failed"
+                print_info "You can pull a model later from the UI or with: ollama pull llama3.2"
+            fi
         else
-            print_error "Model download failed"
-            print_error "LocalLLMChat requires at least one model to function"
-            print_info "You can download it manually later with: ollama pull dolphin-mistral"
-            read -p "Press Enter to continue anyway..."
+            print_info "Skipping model download. Pull one later with: ollama pull llama3.2"
         fi
     fi
 
@@ -293,6 +292,25 @@ if [ $? -eq 0 ]; then
 else
     print_error "Installation failed"
     exit 1
+fi
+
+# Install update-models.sh
+if [ -f "update-models.sh" ]; then
+    print_info "Installing update-models.sh..."
+    MODELS_SCRIPT_DEST="/usr/local/bin/ollama-update-models"
+    if cp "update-models.sh" "$MODELS_SCRIPT_DEST" 2>/dev/null && chmod +x "$MODELS_SCRIPT_DEST"; then
+        print_success "Installed to $MODELS_SCRIPT_DEST — run: ollama-update-models"
+    else
+        # Fall back to user bin (no sudo needed)
+        mkdir -p "$HOME/.local/bin"
+        cp "update-models.sh" "$HOME/.local/bin/ollama-update-models"
+        chmod +x "$HOME/.local/bin/ollama-update-models"
+        print_success "Installed to ~/.local/bin/ollama-update-models — run: ollama-update-models"
+        if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+            print_warning "Add ~/.local/bin to your PATH to use the command:"
+            echo "  echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.zprofile"
+        fi
+    fi
 fi
 
 # Step 6: Create Application Launcher
@@ -412,20 +430,18 @@ print_info "To stop the server: Use the 'Shutdown Server' button in the web inte
 echo
 
 if command -v ollama &> /dev/null; then
-    print_info "Ollama Configuration:"
+    print_info "Ollama:"
     echo "   Endpoint: http://localhost:11434"
-    if ollama list 2>/dev/null | grep -q "dolphin-mistral"; then
-        echo "   Model: dolphin-mistral"
-    else
-        echo "   Model: (first available model)"
-    fi
+    echo "   Models:   $(ollama list 2>/dev/null | tail -n +2 | awk '{print $1}' | tr '\n' ' ' || echo '(none yet)')"
+    echo "   Update:   ollama-update-models"
+    echo "   Schedule: ollama-update-models --install-timer"
 fi
 
 echo
 print_info "For detailed setup instructions, see SETUP.md"
 print_info "For usage information, see README.md"
 echo
-print_success "Happy chatting! 🎉"
+print_success "Happy chatting!"
 echo
 
 read -p "Press Enter to exit (LocalLLMChat will continue running)..."

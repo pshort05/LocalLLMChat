@@ -43,3 +43,46 @@ feat: Save Configuration button persists all settings explicitly
 - Button transitions: idle → "Saving..." → "Saved!" (green) or "Failed" (red) then resets
 - Refactored collectSettings() helper shared by both auto-save and explicit save
 - Added icon-primary hover style to collapsed icon strip for consistency
+
+fix: update macOS and Windows installers to current state
+
+- Replaced hardcoded dolphin-mistral default with llama3.2 (~2 GB) throughout
+- Model install step now interactive: shows existing models, lets user choose any
+  model by name, or offers llama3.2 if nothing is installed
+- Removed "recommended for uncensored responses" messaging
+- macOS: install update-models.sh to /usr/local/bin/ollama-update-models (falls back
+  to ~/.local/bin if /usr/local/bin is not writable without sudo)
+- macOS: final summary shows installed models, update command, and schedule command
+- Windows: final summary notes update-models.sh is available under WSL/Git Bash
+
+docs: add MODELS.md — runtime guide and model selection reference
+
+- Quantization formats explained (F16 → Q2_K) with sizing formula
+- Hardware tier table: CPU-only through multi-GPU and Apple Silicon
+- Ollama deep-dive: how it works, key commands, environment variables,
+  Modelfile customisation, context window tradeoffs
+- LM Studio deep-dive: how it works, GPU layer offloading, comparison vs Ollama
+- Model recommendations for each hardware tier (CPU-only 8GB through 48+ GB VRAM)
+- Model recommendations by use case: general chat, coding, creative writing,
+  summarisation, multilingual, maths/reasoning
+- Notable models at a glance table with creators and Ollama pull names
+- Performance tips: quantization selection, KV cache sizing, CPU thread tuning,
+  temperature guide, GPU monitoring commands
+- README: added MODELS.md reference under Supported Backends, added to project tree
+
+docs: add documentation links to README
+
+- New Documentation section (table) linking INSTALL.md, SETUP.md, MODELS.md
+  with one-line descriptions of each; placed after Features, before Installation
+- Project structure tree: INSTALL.md, SETUP.md, MODELS.md converted to markdown links
+
+docs: update README with all current features
+
+- Added chat history section: auto-save behaviour, loading, cross-model continuation,
+  deletion, and conversation file format
+- Added sidebar section: collapsible strip, full button reference table
+- Added token usage section: duration, tokens, tok/s, model name
+- Added update-models.sh usage to Updating Ollama Models section
+- Expanded API reference with all conversation endpoints (load, delete, delete-all)
+- Added missing troubleshooting entry for conversation history after Clear Chat
+- Added update-models.sh to project structure tree

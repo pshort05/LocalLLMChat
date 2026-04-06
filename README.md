@@ -11,14 +11,26 @@ LocalLLMChat is a Flask-based web interface for chatting with local Large Langua
 ## Features
 
 - **Multi-backend support** — Ollama, LM Studio, and any OpenAI-compatible endpoint
-- **Persistent settings** — endpoint, model, temperature, system prompt, and theme saved to `~/.local_llm_chat/settings.yaml` and restored on every page load; editable directly in the file
+- **Persistent settings** — endpoint, model, temperature, system prompt, and theme saved to `~/.local_llm_chat/settings.yaml`; auto-saved on every change and restorable with the Save Configuration button
+- **Chat history browser** — conversations auto-saved after every reply; browse, load, and delete from the History modal; model-agnostic so any saved chat can be continued with any model
+- **Collapsible sidebar** — collapses to a compact icon strip; state persisted across page loads
+- **Token usage display** — each assistant reply shows duration, token counts, tokens/sec, and model name
 - **Network accessible** — binds to all interfaces (`0.0.0.0`) so any device on your local network can connect
 - **Linux background service** — installs as a systemd service with automatic startup at boot, firewall configuration, and Ollama lifecycle management
-- **LLM service management** — start Ollama from the UI, monitor running status and active model, shutdown the server from the browser
+- **LLM service management** — start Ollama from the UI, monitor running status and active model, shut down the server from the browser
 - **Server hostname display** — shows which machine is serving the interface (useful on multi-host setups)
-- **Conversation history** — saved as JSON to `~/.local_llm_chat/conversations/`
-- **Dark / light theme** — Cyber Dark theme by default, toggleable and persisted
+- **Dark / light theme** — Cyber Dark theme by default, toggleable and persisted; all modals themed to match
 - **Responsive design** — works on desktop and mobile browsers
+
+---
+
+## Documentation
+
+| File | Contents |
+|------|----------|
+| [INSTALL.md](INSTALL.md) | Quick-start install commands per platform |
+| [SETUP.md](SETUP.md) | Detailed platform setup: Ollama, LM Studio, per-OS troubleshooting |
+| [MODELS.md](MODELS.md) | Runtime deep-dive, hardware tiers, quantization guide, model recommendations |
 
 ---
 
@@ -128,6 +140,7 @@ sudo journalctl -u local-llm-chat -f
 
 # User service
 systemctl --user status local-llm-chat
+systemctl --user restart local-llm-chat
 journalctl --user -u local-llm-chat -f
 ```
 
@@ -137,13 +150,10 @@ journalctl --user -u local-llm-chat -f
 
 ### Settings file
 
-All UI settings are automatically saved to `~/.local_llm_chat/settings.yaml` whenever you change them. You can also edit the file directly — changes apply on the next page load.
+All UI settings are automatically saved to `~/.local_llm_chat/settings.yaml` whenever you change them. You can also click **Save Configuration** in the sidebar to save immediately with visual confirmation, or edit the file directly — changes apply on the next page load.
 
 ```yaml
 # LocalLLMChat Settings
-# Auto-saved whenever you change settings in the UI.
-# You can also edit this file directly — changes apply on next page load.
-
 endpoint: http://localhost:11434
 model: llama3.2
 temperature: 0.8
@@ -171,6 +181,81 @@ system_prompt: |
 
 ---
 
+## Chat History
+
+Conversations are **automatically saved** after every assistant reply — no manual action required. Each conversation is stored as a JSON file in `~/.local_llm_chat/conversations/`.
+
+### History browser
+
+Click **Chat History** in the sidebar to open the history modal. For each saved conversation it shows:
+
+- The title (derived from your first message)
+- The model that was originally used
+- The date and time of the last reply
+- The total number of messages
+
+### Loading a conversation
+
+Click **Load** on any history entry. If there is an active chat, you will be prompted to confirm before it is replaced. The conversation is restored into the chat window and the **currently selected model** is used for all new replies — you can continue any conversation with any model regardless of which model originally generated it.
+
+If the loaded conversation came from a different model than the one currently selected, a brief notice appears in the status bar: `Loaded from llama3.2 — continuing with mistral`.
+
+### Deleting conversations
+
+- Click the **trash** icon on a row to delete that conversation.
+- Click **Delete All** in the modal header to clear all saved conversations.
+
+Both actions require confirmation.
+
+### Conversation file format
+
+```json
+{
+  "id": "20260405_142345",
+  "title": "Why does the moon affect tides?",
+  "created_at": "2026-04-05T14:23:45.123456",
+  "updated_at": "2026-04-05T15:01:12.000000",
+  "origin_model": "llama3.2",
+  "origin_endpoint": "http://localhost:11434",
+  "messages": [
+    { "role": "user",      "content": "Why does the moon affect tides?" },
+    { "role": "assistant", "content": "The moon exerts gravitational pull..." }
+  ]
+}
+```
+
+---
+
+## Sidebar
+
+The left sidebar contains all configuration controls. It can be collapsed to a compact icon strip by clicking the **‹** chevron at the top right of the sidebar. The collapsed strip shows icons for the most common actions. The collapsed/expanded state is saved in the browser and restored on next load.
+
+### Sidebar actions
+
+| Button | Description |
+|---|---|
+| **Save Configuration** | Immediately saves all current settings (endpoint, model, temperature, theme, system prompt) to `settings.yaml` with visual confirmation |
+| **Clear Chat** | Clears the current conversation from the screen and resets the history |
+| **Save Conversation** | Manually saves the current conversation (also updates the auto-save file) |
+| **Chat History** | Opens the history browser modal |
+| **Setup LLM** | Opens the platform-specific LLM installation guide |
+| **Shutdown Server** | Stops the Flask server process |
+
+---
+
+## Token Usage
+
+Every assistant reply shows a stats bar beneath the message:
+
+| Indicator | Description |
+|---|---|
+| ⏱ duration | Total wall-clock time for the response in seconds |
+| # tokens | Prompt tokens + completion tokens |
+| ⚡ tok/s | Tokens generated per second (Ollama: from eval_duration; OpenAI-compatible: approximated) |
+| 🖥 model | Model name as reported by the LLM endpoint |
+
+---
+
 ## Project Structure
 
 ```
@@ -184,11 +269,13 @@ LocalLLMChat/
 ├── install-macos.sh              # macOS installer
 ├── install-windows.ps1           # Windows PowerShell installer
 ├── install-chromebook.sh         # Chromebook installer
+├── update-models.sh              # Update all installed Ollama models to latest
 ├── pyproject.toml                # Build configuration and dependencies
 ├── requirements.txt              # pip dependencies
-├── INSTALL.md                    # Quick-start install reference
-├── SETUP.md                      # Detailed platform setup guides
-└── README.md                     # This file
+├── [INSTALL.md](INSTALL.md)              # Quick-start install reference
+├── [SETUP.md](SETUP.md)                  # Detailed platform setup guides
+├── [MODELS.md](MODELS.md)                # Runtime guide, model selection, hardware requirements
+└── README.md                             # This file
 ```
 
 ---
@@ -204,8 +291,11 @@ LocalLLMChat/
 | `POST` | `/api/settings` | Save settings to `settings.yaml` |
 | `GET` | `/api/llm_status` | LLM running state, installed status, model list, hostname |
 | `POST` | `/api/start_llm` | Start the local Ollama service |
-| `POST` | `/api/save_conversation` | Save chat history to JSON |
-| `GET` | `/api/conversations` | List saved conversations |
+| `POST` | `/api/save_conversation` | Save or update a conversation (upsert by id) |
+| `GET` | `/api/conversations` | List saved conversations (newest first) |
+| `GET` | `/api/conversations/<id>` | Load a single conversation by id |
+| `DELETE` | `/api/conversations/<id>` | Delete a single conversation |
+| `DELETE` | `/api/conversations` | Delete all conversations |
 | `POST` | `/api/shutdown` | Shut down the Flask server |
 
 ---
@@ -217,6 +307,22 @@ LocalLLMChat/
 | **Ollama** | `http://localhost:11434` | Recommended; auto-detected by port |
 | **LM Studio** | `http://localhost:1234` | OpenAI-compatible local server |
 | **LocalAI / vLLM / Llamafile** | varies | Any OpenAI-compatible `/v1/chat/completions` endpoint |
+
+See [MODELS.md](MODELS.md) for a full guide to both runtimes, hardware requirements, quantization formats, and model recommendations by use case.
+
+---
+
+## Updating Ollama Models
+
+`update-models.sh` updates all locally installed Ollama models to the latest versions.
+
+```bash
+./update-models.sh                  # Interactive update
+./update-models.sh --dry-run        # Show what would run, no changes
+./update-models.sh --auto           # Non-interactive (cron / systemd)
+./update-models.sh --install-timer  # Install a weekly systemd timer (Sun 03:00)
+./update-models.sh --remove-timer   # Remove the timer
+```
 
 ---
 
@@ -244,6 +350,9 @@ Use a smaller or more quantized model (e.g. `llama3.2:1b`, `phi`) or lower the t
 
 **Settings not loading**
 Check `~/.local_llm_chat/settings.yaml` for YAML syntax errors. Delete the file to regenerate defaults on next startup.
+
+**Conversation history missing after Clear Chat**
+Clear Chat resets the active session. Conversations are auto-saved after each reply, so the history browser will still contain all previous exchanges.
 
 ---
 
