@@ -1,0 +1,16 @@
+feat: settings persistence, Linux systemd service installer, network access, README overhaul
+
+- Add settings.yaml (pyyaml) with GET /api/settings and POST /api/settings routes
+- Auto-create ~/.local_llm_chat/settings.yaml with defaults on first run
+- UI loads saved settings (endpoint, model, temperature, theme, system_prompt) on page load
+- UI auto-saves settings on change with 600ms debounce; theme toggle also persists
+- Move default system prompt from JS constant to Python backend
+- Add install-service-linux.sh: installs Ollama if missing, creates systemd service (system or --user), enables on boot
+- Firewall handling in service installer: auto-detects and opens port via ufw, firewalld, or iptables
+- Firewall rules removed on --uninstall
+- Detect and display local network IP in install summary
+- Add get_local_ip(), open_firewall_port(), close_firewall_port() helpers to installer
+- Add pyyaml>=6.0 to requirements.txt and pyproject.toml
+- Update INSTALL.md with service installer section
+- Overhaul README.md: full feature list, all install methods, settings reference table, API reference table, service management, updated troubleshooting
+- Update CLAUDE.md: new API endpoints, settings config section, install scripts, commit_message workflow

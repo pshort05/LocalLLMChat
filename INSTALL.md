@@ -4,12 +4,50 @@ Quick reference for installing LocalLLMChat on different platforms.
 
 ## 🚀 Quick Install
 
-### Linux
+### Linux (interactive, foreground use)
 ```bash
 git clone https://github.com/yourusername/LocalLLMChat.git
 cd LocalLLMChat
 chmod +x install-linux.sh
 ./install-linux.sh
+```
+
+### Linux — Persistent Background Service (recommended for workstations/servers)
+
+Installs LocalLLMChat and Ollama as systemd services that start automatically at boot.
+
+```bash
+git clone https://github.com/yourusername/LocalLLMChat.git
+cd LocalLLMChat
+chmod +x install-service-linux.sh
+
+# System-wide service (starts at boot for all users, requires sudo)
+./install-service-linux.sh
+
+# Per-user service (starts on login, no sudo needed for the app)
+./install-service-linux.sh --user
+
+# Remove everything
+./install-service-linux.sh --uninstall
+```
+
+**What it does:**
+- Installs Ollama via the official installer if not already present
+- Enables and starts the `ollama` systemd service
+- Creates a Python virtualenv and installs LocalLLMChat into it
+- Writes a `local-llm-chat` systemd service unit
+- Enables the service to start on boot
+- For system installs: creates a dedicated `local-llm-chat` service user
+
+**Service management after install:**
+```bash
+# System service
+sudo systemctl status local-llm-chat
+sudo journalctl -u local-llm-chat -f
+
+# User service
+systemctl --user status local-llm-chat
+journalctl --user -u local-llm-chat -f
 ```
 
 ### macOS

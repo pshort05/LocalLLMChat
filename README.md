@@ -1,6 +1,6 @@
 # LocalLLMChat
 
-LocalLLMChat is a robust, Flask-based web interface designed for interacting with local Large Language Model (LLM) runtimes. It provides a secure, private, and customizable environment for AI-assisted workflows without requiring external API keys or internet connectivity.
+LocalLLMChat is a Flask-based web interface for chatting with local Large Language Model runtimes. It provides a private, network-accessible environment for AI-assisted workflows with no external API keys or internet connectivity required.
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
@@ -10,38 +10,75 @@ LocalLLMChat is a robust, Flask-based web interface designed for interacting wit
 
 ## Features
 
-- **Unified Interface**: Connects to multiple backends including Ollama, LM Studio, and other OpenAI-compatible endpoints.
-- **Privacy-Centric**: Operates entirely within your local network, ensuring data security and offline availability.
-- **Persistent Conversations**: Automatic saving and manual export of chat history to JSON format.
-- **Granular Control**: Real-time adjustment of inference parameters such as temperature and system prompts.
-- **Process Management**: Integrated background execution mode with persistent service support via PM2.
-- **Responsive Design**: Optimized for both desktop and mobile browsers across the local network.
-- **Developer Tools**: Dedicated debug mode with auto-reload and comprehensive logging.
+- **Multi-backend support** — Ollama, LM Studio, and any OpenAI-compatible endpoint
+- **Persistent settings** — endpoint, model, temperature, system prompt, and theme saved to `~/.local_llm_chat/settings.yaml` and restored on every page load; editable directly in the file
+- **Network accessible** — binds to all interfaces (`0.0.0.0`) so any device on your local network can connect
+- **Linux background service** — installs as a systemd service with automatic startup at boot, firewall configuration, and Ollama lifecycle management
+- **LLM service management** — start Ollama from the UI, monitor running status and active model, shutdown the server from the browser
+- **Server hostname display** — shows which machine is serving the interface (useful on multi-host setups)
+- **Conversation history** — saved as JSON to `~/.local_llm_chat/conversations/`
+- **Dark / light theme** — Cyber Dark theme by default, toggleable and persisted
+- **Responsive design** — works on desktop and mobile browsers
 
 ---
 
 ## Installation
 
-### Automated Installation
+### Linux — Persistent Service (recommended for workstations and servers)
 
-Automated scripts are provided for rapid deployment across supported platforms. These scripts verify Python dependencies, optionally install the Ollama runtime, and configure the application environment.
+Installs LocalLLMChat and Ollama as systemd services that start at boot, opens the firewall port, and prints your local network URL.
 
-**Linux / macOS:**
 ```bash
 git clone https://github.com/yourusername/LocalLLMChat.git
 cd LocalLLMChat
-chmod +x install-linux.sh # or install-macos.sh
+
+# System-wide service — starts at boot for all users (requires sudo)
+chmod +x install-service-linux.sh
+./install-service-linux.sh
+
+# Per-user service — starts on login, no sudo needed for the app
+./install-service-linux.sh --user
+
+# Remove everything
+./install-service-linux.sh --uninstall
+```
+
+The installer will:
+1. Install Ollama via the official installer if not present
+2. Enable and start the `ollama` systemd service
+3. Install LocalLLMChat into a virtualenv at `/opt/local-llm-chat`
+4. Create and enable a `local-llm-chat` systemd service (with a dedicated service user for system installs)
+5. Open port 5000 in `ufw`, `firewalld`, or `iptables` (whichever is active)
+6. Print both localhost and local-network access URLs
+
+### Linux — Interactive (foreground / development)
+
+```bash
+git clone https://github.com/yourusername/LocalLLMChat.git
+cd LocalLLMChat
+chmod +x install-linux.sh
 ./install-linux.sh
 ```
 
-**Windows (PowerShell):**
+### macOS
+
+```bash
+git clone https://github.com/yourusername/LocalLLMChat.git
+cd LocalLLMChat
+chmod +x install-macos.sh
+./install-macos.sh
+```
+
+### Windows (PowerShell)
+
 ```powershell
 git clone https://github.com/yourusername/LocalLLMChat.git
 cd LocalLLMChat
 powershell -ExecutionPolicy Bypass -File install-windows.ps1
 ```
 
-**Chromebook (Linux Beta):**
+### Chromebook (Linux Beta)
+
 ```bash
 git clone https://github.com/yourusername/LocalLLMChat.git
 cd LocalLLMChat
@@ -49,128 +86,180 @@ chmod +x install-chromebook.sh
 ./install-chromebook.sh
 ```
 
-### Manual Installation
+### Manual
 
-To install the package manually within a virtual environment:
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/yourusername/LocalLLMChat.git
-   cd LocalLLMChat
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   pip install -e .
-   ```
-
-3. **Configure the LLM Backend:**
-   Ensure a compatible service (e.g., Ollama or LM Studio) is active. Refer to [SETUP.md](SETUP.md) for detailed configuration steps.
+```bash
+git clone https://github.com/yourusername/LocalLLMChat.git
+cd LocalLLMChat
+python3 -m venv venv
+source venv/bin/activate
+pip install -e .
+```
 
 ---
 
-## Execution
-
-The application can be launched using the `local-llm-chat` entry point.
+## Running the Application
 
 ```bash
-# Standard background execution (default on Unix)
+# Background mode (default on Unix — detaches after launch)
 local-llm-chat
 
-# Foreground execution for monitoring
+# Stay attached to the terminal
 local-llm-chat --foreground
 
-# Development mode with hot-reloading
+# Development mode with hot-reload and verbose logging
 local-llm-chat --debug
 
-# Network configuration
-local-llm-chat --host 0.0.0.0 --port 5000
+# Custom host and port
+local-llm-chat --host 0.0.0.0 --port 8080
 ```
 
-### Operational Modes
+Then open `http://localhost:5000` in your browser, or use the local network URL printed at startup to access from any other device on your network.
 
-- **Background**: The server persists after the terminal session is closed.
-- **Foreground**: Standard execution mode; process terminates with the terminal session.
-- **Debug**: Enables Flask development server features and verbose logging.
+---
+
+## Service Management (Linux systemd install)
+
+```bash
+# System service
+sudo systemctl status local-llm-chat
+sudo systemctl restart local-llm-chat
+sudo journalctl -u local-llm-chat -f
+
+# User service
+systemctl --user status local-llm-chat
+journalctl --user -u local-llm-chat -f
+```
 
 ---
 
 ## Configuration
 
-The web interface allows for dynamic configuration of the following parameters:
+### Settings file
 
-1. **API Endpoint**: The URL of your local LLM service (e.g., `http://localhost:11434` for Ollama).
-2. **Model Selection**: The specific model identifier to be used for inference.
-3. **Temperature**: Controls the randomness of the output (0.0 for deterministic, up to 2.0 for creative).
-4. **System Prompt**: Defines the persona and constraints for the AI assistant.
+All UI settings are automatically saved to `~/.local_llm_chat/settings.yaml` whenever you change them. You can also edit the file directly — changes apply on the next page load.
+
+```yaml
+# LocalLLMChat Settings
+# Auto-saved whenever you change settings in the UI.
+# You can also edit this file directly — changes apply on next page load.
+
+endpoint: http://localhost:11434
+model: llama3.2
+temperature: 0.8
+theme: dark
+system_prompt: |
+  You are a helpful assistant.
+```
+
+| Field | Description |
+|---|---|
+| `endpoint` | LLM service base URL — Ollama default `:11434`, LM Studio `:1234` |
+| `model` | Model name passed to the LLM (e.g. `llama3.2`, `mistral`, `codellama`) |
+| `temperature` | `0.0` = precise / deterministic, `2.0` = highly creative; default `0.8` |
+| `theme` | `dark` (Cyber Dark) or `light` |
+| `system_prompt` | Instructions prepended to every conversation as a system message |
+
+### CLI options
+
+| Flag | Default | Description |
+|---|---|---|
+| `--host` | `0.0.0.0` | Interface to bind (use `0.0.0.0` for network access) |
+| `--port` | `5000` | TCP port |
+| `--debug` | off | Flask debug mode with hot-reload |
+| `--foreground` | off | Stay attached to terminal instead of daemonising |
 
 ---
 
 ## Project Structure
 
-```text
+```
 LocalLLMChat/
-├── src/
-│   └── local_llm_chat/
-│       ├── app.py               # Core Flask application and API logic
-│       └── templates/
-│           └── chat.html        # Frontend interface and client-side logic
-├── pyproject.toml               # Build system configuration
-├── requirements.txt             # Project dependencies
-├── README.md                    # Project documentation
-├── SETUP.md                     # Platform-specific configuration guides
-└── LICENSE                      # MIT License
+├── src/local_llm_chat/
+│   ├── app.py                    # Flask application, API routes, settings I/O
+│   └── templates/
+│       └── chat.html             # Single-page UI (styles, layout, JavaScript)
+├── install-linux.sh              # Interactive Linux installer
+├── install-service-linux.sh      # Linux systemd service installer
+├── install-macos.sh              # macOS installer
+├── install-windows.ps1           # Windows PowerShell installer
+├── install-chromebook.sh         # Chromebook installer
+├── pyproject.toml                # Build configuration and dependencies
+├── requirements.txt              # pip dependencies
+├── INSTALL.md                    # Quick-start install reference
+├── SETUP.md                      # Detailed platform setup guides
+└── README.md                     # This file
 ```
 
 ---
 
-## Development and Contribution
+## API Reference
 
-LocalLLMChat encourages community contributions. To set up a development environment:
-
-1. **Install with development dependencies:**
-   ```bash
-   pip install -e ".[dev]"
-   ```
-
-2. **Maintain Code Quality:**
-   Use `black` for formatting and `flake8` for linting before submitting pull requests.
-   ```bash
-   black src/
-   ```
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/` | Chat interface |
+| `POST` | `/api/chat` | Send a message to the LLM |
+| `GET` | `/api/models` | List models available at the endpoint |
+| `GET` | `/api/settings` | Load settings from `settings.yaml` |
+| `POST` | `/api/settings` | Save settings to `settings.yaml` |
+| `GET` | `/api/llm_status` | LLM running state, installed status, model list, hostname |
+| `POST` | `/api/start_llm` | Start the local Ollama service |
+| `POST` | `/api/save_conversation` | Save chat history to JSON |
+| `GET` | `/api/conversations` | List saved conversations |
+| `POST` | `/api/shutdown` | Shut down the Flask server |
 
 ---
 
 ## Supported Backends
 
-- **Ollama**: Default recommended runtime for Linux, macOS, and Windows.
-- **LM Studio**: Provides a GUI-driven approach for model management.
-- **OpenAI-Compatible APIs**: Supports LocalAI, vLLM, and Llamafile.
+| Backend | Default endpoint | Notes |
+|---|---|---|
+| **Ollama** | `http://localhost:11434` | Recommended; auto-detected by port |
+| **LM Studio** | `http://localhost:1234` | OpenAI-compatible local server |
+| **LocalAI / vLLM / Llamafile** | varies | Any OpenAI-compatible `/v1/chat/completions` endpoint |
 
 ---
 
 ## Troubleshooting
 
-### Connectivity Issues
-Ensure the backend service is running and accessible at the configured endpoint. You can verify Ollama connectivity via:
+**Can't connect from another device on the network**
+- Verify the service is bound to `0.0.0.0` (it is by default)
+- Check the firewall: `sudo ufw status` or `sudo firewall-cmd --list-ports`
+- Open the port manually if needed: `sudo ufw allow 5000/tcp`
+
+**LLM connection refused**
 ```bash
-curl http://localhost:11434/api/tags
+curl http://localhost:11434/api/tags   # Ollama health check
+sudo systemctl status ollama           # Service status
 ```
 
-### Model Availability
-Confirm the requested model is pulled and available in your local registry:
+**Model not found**
 ```bash
-ollama list
+ollama list          # Show downloaded models
+ollama pull llama3.2 # Download a model
 ```
 
-### Resource Management
-Performance is dependent on local hardware. If experiencing latency, consider utilizing smaller quantized models (e.g., 4-bit or 5-bit) or decreasing the context window.
+**Slow responses**
+Use a smaller or more quantized model (e.g. `llama3.2:1b`, `phi`) or lower the temperature.
+
+**Settings not loading**
+Check `~/.local_llm_chat/settings.yaml` for YAML syntax errors. Delete the file to regenerate defaults on next startup.
+
+---
+
+## Development
+
+```bash
+pip install -e ".[dev]"
+black src/          # Format
+flake8 src/         # Lint
+```
 
 ---
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for the full text.
+MIT — see [LICENSE](LICENSE).
 
 ---
 
@@ -178,4 +267,4 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 - [Ollama](https://ollama.com/)
 - [LM Studio](https://lmstudio.ai/)
-- [Flask Framework](https://flask.palletsprojects.com/)
+- [Flask](https://flask.palletsprojects.com/)
