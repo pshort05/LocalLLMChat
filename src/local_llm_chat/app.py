@@ -12,8 +12,11 @@ Then navigate to http://localhost:5000 in your browser.
 """
 
 import os
+import re
 import json
 import logging
+import platform
+import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
@@ -372,6 +375,15 @@ class LocalLLMChat:
                 logger.error(f"Error saving settings: {e}")
                 return jsonify({"error": str(e)}), 500
 
+        @self.app.route("/api/system_info", methods=["GET"])
+        def system_info():
+            """Return CPU, RAM, and GPU info for the host running the server."""
+            try:
+                return jsonify(self._get_system_info())
+            except Exception as e:
+                logger.error(f"Error getting system info: {e}")
+                return jsonify({"error": str(e)}), 500
+
         @self.app.route("/api/llm_status", methods=["GET"])
         def llm_status():
             """Check LLM service status and available models."""
@@ -574,6 +586,195 @@ class LocalLLMChat:
             logger.error(f"Error fetching models: {e}")
             return []
 
+    # ── System information ─────────────────────────────────────────────────────
+
+    def _get_cpu_name(self) -> str:
+        """Return the CPU model name string."""
+        system = platform.system()
+        try:
+            if system == "Linux":
+                with open("/proc/cpuinfo") as f:
+                    for line in f:
+                        if line.startswith("model name"):
+                            return line.split(":", 1)[1].strip()
+            elif system == "Darwin":
+                result = subprocess.run(
+                    ["sysctl", "-n", "machdep.cpu.brand_string"],
+                    capture_output=True, text=True, timeout=5,
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    return result.stdout.strip()
+                # Apple Silicon uses a different key
+                result = subprocess.run(
+                    ["sysctl", "-n", "hw.model"],
+                    capture_output=True, text=True, timeout=5,
+                )
+                if result.returncode == 0:
+                    return result.stdout.strip()
+            elif system == "Windows":
+                result = subprocess.run(
+                    ["wmic", "cpu", "get", "Name", "/value"],
+                    capture_output=True, text=True, timeout=5,
+                )
+                for line in result.stdout.splitlines():
+                    if line.startswith("Name="):
+                        return line.split("=", 1)[1].strip()
+        except Exception as e:
+            logger.debug(f"CPU name detection failed: {e}")
+        return platform.processor() or "Unknown CPU"
+
+    def _get_ram_info(self) -> Dict:
+        """Return total and available RAM in GB."""
+        system = platform.system()
+        try:
+            # Try psutil first (most reliable cross-platform)
+            import psutil
+            vm = psutil.virtual_memory()
+            return {
+                "total_gb": round(vm.total / (1024 ** 3), 1),
+                "available_gb": round(vm.available / (1024 ** 3), 1),
+            }
+        except ImportError:
+            pass
+        try:
+            if system == "Linux":
+                with open("/proc/meminfo") as f:
+                    content = f.read()
+                total_kb = int(re.search(r"MemTotal:\s+(\d+)", content).group(1))
+                avail_kb = int(re.search(r"MemAvailable:\s+(\d+)", content).group(1))
+                return {
+                    "total_gb": round(total_kb / (1024 ** 2), 1),
+                    "available_gb": round(avail_kb / (1024 ** 2), 1),
+                }
+            elif system == "Darwin":
+                r = subprocess.run(["sysctl", "-n", "hw.memsize"], capture_output=True, text=True, timeout=5)
+                total = int(r.stdout.strip())
+                return {"total_gb": round(total / (1024 ** 3), 1), "available_gb": None}
+            elif system == "Windows":
+                import ctypes
+                class _MEMSTATUS(ctypes.Structure):
+                    _fields_ = [
+                        ("dwLength", ctypes.c_ulong),
+                        ("dwMemoryLoad", ctypes.c_ulong),
+                        ("ullTotalPhys", ctypes.c_ulonglong),
+                        ("ullAvailPhys", ctypes.c_ulonglong),
+                        ("ullTotalPageFile", ctypes.c_ulonglong),
+                        ("ullAvailPageFile", ctypes.c_ulonglong),
+                        ("ullTotalVirtual", ctypes.c_ulonglong),
+                        ("ullAvailVirtual", ctypes.c_ulonglong),
+                        ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+                    ]
+                stat = _MEMSTATUS()
+                stat.dwLength = ctypes.sizeof(stat)
+                ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat))
+                return {
+                    "total_gb": round(stat.ullTotalPhys / (1024 ** 3), 1),
+                    "available_gb": round(stat.ullAvailPhys / (1024 ** 3), 1),
+                }
+        except Exception as e:
+            logger.debug(f"RAM detection failed: {e}")
+        return {"total_gb": None, "available_gb": None}
+
+    def _get_gpu_info(self) -> List[Dict]:
+        """Detect GPUs and VRAM using nvidia-smi, rocm-smi, system_profiler, or lspci."""
+        gpus = []
+
+        # ── NVIDIA via nvidia-smi ──────────────────────────────────────────────
+        try:
+            r = subprocess.run(
+                ["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader,nounits"],
+                capture_output=True, text=True, timeout=5,
+            )
+            if r.returncode == 0:
+                for line in r.stdout.strip().splitlines():
+                    parts = [p.strip() for p in line.split(",")]
+                    if parts[0]:
+                        try:
+                            vram_gb = round(int(parts[1]) / 1024, 1) if len(parts) > 1 else None
+                        except ValueError:
+                            vram_gb = None
+                        gpus.append({"name": parts[0], "vram_gb": vram_gb, "vendor": "NVIDIA"})
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            pass
+
+        # ── AMD via rocm-smi ───────────────────────────────────────────────────
+        if not gpus:
+            try:
+                r = subprocess.run(
+                    ["rocm-smi", "--showproductname", "--showmeminfo", "vram"],
+                    capture_output=True, text=True, timeout=5,
+                )
+                if r.returncode == 0:
+                    names = re.findall(r"GPU\[\d+\]\s*:\s*(.+)", r.stdout)
+                    vrams = re.findall(r"VRAM Total Memory \(B\):\s*(\d+)", r.stdout)
+                    seen = set()
+                    for i, name in enumerate(names):
+                        name = name.strip()
+                        if name in seen:
+                            continue
+                        seen.add(name)
+                        vram_gb = round(int(vrams[i]) / (1024 ** 3), 1) if i < len(vrams) else None
+                        gpus.append({"name": name, "vram_gb": vram_gb, "vendor": "AMD"})
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                pass
+
+        # ── macOS via system_profiler ──────────────────────────────────────────
+        if not gpus and platform.system() == "Darwin":
+            try:
+                r = subprocess.run(
+                    ["system_profiler", "SPDisplaysDataType", "-json"],
+                    capture_output=True, text=True, timeout=10,
+                )
+                if r.returncode == 0:
+                    data = json.loads(r.stdout)
+                    for item in data.get("SPDisplaysDataType", []):
+                        name = item.get("sppci_model") or item.get("_name", "Unknown GPU")
+                        vram_str = item.get("spdisplays_vram") or item.get("spdisplays_vram_shared", "")
+                        vram_gb = None
+                        if vram_str:
+                            m = re.search(r"(\d+(?:\.\d+)?)\s*(GB|MB)", vram_str, re.IGNORECASE)
+                            if m:
+                                val = float(m.group(1))
+                                vram_gb = round(val if m.group(2).upper() == "GB" else val / 1024, 1)
+                        vendor = "Apple" if "Apple" in name else "AMD" if ("AMD" in name or "Radeon" in name) else "Intel" if "Intel" in name else "Other"
+                        gpus.append({"name": name, "vram_gb": vram_gb, "vendor": vendor})
+            except Exception as e:
+                logger.debug(f"macOS GPU detection failed: {e}")
+
+        # ── Linux fallback via lspci ───────────────────────────────────────────
+        if not gpus and platform.system() == "Linux":
+            try:
+                r = subprocess.run(["lspci"], capture_output=True, text=True, timeout=5)
+                if r.returncode == 0:
+                    for line in r.stdout.splitlines():
+                        low = line.lower()
+                        if any(x in low for x in ["vga compatible", "3d controller", "display controller"]):
+                            name = line.split(":", 2)[-1].strip() if line.count(":") >= 2 else line
+                            vendor = ("NVIDIA" if "nvidia" in low else
+                                      "AMD" if ("amd" in low or "radeon" in low) else
+                                      "Intel" if "intel" in low else "Unknown")
+                            gpus.append({"name": name, "vram_gb": None, "vendor": vendor})
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                pass
+
+        return gpus
+
+    def _get_system_info(self) -> Dict:
+        """Aggregate CPU, RAM, and GPU information for the host machine."""
+        cpu_name = self._get_cpu_name()
+        ram = self._get_ram_info()
+        gpus = self._get_gpu_info()
+        return {
+            "cpu": {
+                "name": cpu_name,
+                "cores": os.cpu_count() or 0,
+                "arch": platform.machine(),
+            },
+            "ram": ram,
+            "gpu": gpus,
+            "os": f"{platform.system()} {platform.release()}",
+        }
+
     def _check_llm_status(self, endpoint: str) -> Dict:
         """
         Check the status of the local LLM service.
@@ -584,8 +785,6 @@ class LocalLLMChat:
         Returns:
             Dictionary with status information
         """
-        import subprocess
-        import platform
         import socket
 
         status_info = {
@@ -642,9 +841,6 @@ class LocalLLMChat:
         Returns:
             Dictionary with result information
         """
-        import subprocess
-        import platform
-
         system = platform.system()
 
         # Check if Ollama is installed first
@@ -763,7 +959,6 @@ class LocalLLMChat:
     def run(self, host="0.0.0.0", port=5000, debug=False, foreground=False):
         """Run the Flask application."""
         import socket
-        import subprocess
         import sys
 
         # Get local IP address
@@ -805,8 +1000,6 @@ class LocalLLMChat:
 
             # Run in background using nohup (Unix-like systems)
             try:
-                import platform
-
                 if platform.system() == "Windows":
                     # Windows: use pythonw to run in background
                     print("⚠️  Background mode not fully supported on Windows")

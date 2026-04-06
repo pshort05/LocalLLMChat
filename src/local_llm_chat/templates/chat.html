@@ -1161,6 +1161,9 @@
                     <button type="button" class="btn btn-info btn-action" id="setupLLM" data-bs-toggle="modal" data-bs-target="#setupModal">
                         <i class="bi bi-question-circle"></i> Setup LLM
                     </button>
+                    <button type="button" class="btn btn-secondary btn-action" id="systemInfo">
+                        <i class="bi bi-cpu"></i> System Info
+                    </button>
                     <button type="button" class="btn btn-warning btn-action" id="shutdownServer">
                         <i class="bi bi-power"></i> Shutdown Server
                     </button>
@@ -1217,6 +1220,11 @@
                 <button class="icon-strip-btn" id="setupLLMCollapsed" title="Setup LLM"
                         data-bs-toggle="modal" data-bs-target="#setupModal">
                     <i class="bi bi-question-circle"></i>
+                </button>
+
+                <!-- System Info -->
+                <button class="icon-strip-btn" id="systemInfoCollapsed" title="System Info">
+                    <i class="bi bi-cpu"></i>
                 </button>
 
                 <!-- Shutdown -->
@@ -1785,6 +1793,30 @@ ollama pull dolphin-mistral</code></pre>
         </div>
     </div>
 
+    <!-- System Info Modal -->
+    <div class="modal fade" id="systemInfoModal" tabindex="-1" aria-labelledby="systemInfoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="systemInfoModalLabel">
+                        <i class="bi bi-cpu"></i> System Information
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="systemInfoModalBody">
+                    <div class="text-center py-4">
+                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                        <span class="ms-2">Detecting hardware…</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <small class="text-muted me-auto">Hardware detected from the server running LocalLLMChat</small>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
@@ -2137,6 +2169,7 @@ ollama pull dolphin-mistral</code></pre>
             document.getElementById('saveConvCollapsed').addEventListener('click', () =>
                 document.getElementById('saveConversation').click());
             document.getElementById('showHistoryCollapsed').addEventListener('click', openHistoryModal);
+            document.getElementById('systemInfoCollapsed').addEventListener('click', openSystemInfoModal);
             document.getElementById('shutdownCollapsed').addEventListener('click', () =>
                 document.getElementById('shutdownServer').click());
             document.getElementById('startLLMCollapsed').addEventListener('click', () =>
@@ -2240,6 +2273,9 @@ ollama pull dolphin-mistral</code></pre>
             // Chat History button
             document.getElementById('showHistory').addEventListener('click', openHistoryModal);
             document.getElementById('deleteAllConversations').addEventListener('click', deleteAllConversations);
+
+            // System Info button
+            document.getElementById('systemInfo').addEventListener('click', openSystemInfoModal);
 
             // Shutdown server
             document.getElementById('shutdownServer').addEventListener('click', async function() {
@@ -2456,6 +2492,91 @@ ollama pull dolphin-mistral</code></pre>
         function escapeHtml(str) {
             if (!str) return '';
             return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        async function openSystemInfoModal() {
+            const body = document.getElementById('systemInfoModalBody');
+            body.innerHTML = `<div class="text-center py-4">
+                <div class="spinner-border spinner-border-sm" role="status"></div>
+                <span class="ms-2">Detecting hardware…</span>
+            </div>`;
+            const modal = new bootstrap.Modal(document.getElementById('systemInfoModal'));
+            modal.show();
+
+            try {
+                const res = await fetch('/api/system_info');
+                const info = await res.json();
+                if (!res.ok) throw new Error(info.error || 'Failed to load system info');
+                body.innerHTML = renderSystemInfo(info);
+            } catch (e) {
+                body.innerHTML = `<div class="alert alert-danger">Could not load system info: ${escapeHtml(e.message)}</div>`;
+            }
+        }
+
+        function renderSystemInfo(info) {
+            const ram = info.ram || {};
+            const cpu = info.cpu || {};
+            const gpus = info.gpu || [];
+            const os = info.os || 'Unknown';
+
+            // Determine hardware tier and recommendation
+            const totalRam = ram.total_gb || 0;
+            const hasGpu = gpus.length > 0;
+            const gpuVram = gpus.reduce((sum, g) => sum + (g.vram_gb || 0), 0);
+
+            let tier, tierClass, tierRec;
+            if (gpuVram >= 24) {
+                tier = 'High-end GPU'; tierClass = 'success';
+                tierRec = 'Can run 70B models at Q4_K_M, or 34B at Q8_0 comfortably.';
+            } else if (gpuVram >= 12) {
+                tier = 'Mid-range GPU'; tierClass = 'success';
+                tierRec = 'Ideal for 13–34B models at Q4_K_M. Try llama3.1:13b, mistral, or codellama:13b.';
+            } else if (gpuVram >= 6) {
+                tier = 'Entry GPU'; tierClass = 'warning';
+                tierRec = '7B models at Q4_K_M run well. Try llama3.2, gemma2:2b, or phi3.';
+            } else if (totalRam >= 32) {
+                tier = 'CPU — High RAM'; tierClass = 'warning';
+                tierRec = '13B models at Q4_K_M are feasible (slow). 7B models at Q4_K_M are comfortable.';
+            } else if (totalRam >= 16) {
+                tier = 'CPU — Mid RAM'; tierClass = 'warning';
+                tierRec = '7B models at Q4_K_M work well. Stick to Q4_K_M or Q3_K_M for best speed.';
+            } else {
+                tier = 'CPU — Low RAM'; tierClass = 'danger';
+                tierRec = 'Small models only: phi3, gemma2:2b, or any 1–3B model at Q4_K_M.';
+            }
+
+            const gpuRows = gpus.length
+                ? gpus.map(g => `<tr>
+                    <td>${escapeHtml(g.name || 'Unknown')}</td>
+                    <td>${escapeHtml(g.vendor || '')}</td>
+                    <td>${g.vram_gb != null ? g.vram_gb.toFixed(1) + ' GB' : '—'}</td>
+                  </tr>`).join('')
+                : `<tr><td colspan="3" class="text-muted">No GPU detected (CPU inference only)</td></tr>`;
+
+            return `
+            <div class="mb-3">
+                <span class="badge bg-${tierClass} fs-6"><i class="bi bi-star-fill me-1"></i>${escapeHtml(tier)}</span>
+                <p class="mt-2 mb-0">${escapeHtml(tierRec)}</p>
+            </div>
+            <hr>
+            <h6><i class="bi bi-motherboard me-1"></i>CPU</h6>
+            <table class="table table-sm mb-3">
+                <tr><th style="width:35%">Name</th><td>${escapeHtml(cpu.name || 'Unknown')}</td></tr>
+                <tr><th>Logical cores</th><td>${cpu.cores || '—'}</td></tr>
+                <tr><th>Architecture</th><td>${escapeHtml(cpu.arch || '—')}</td></tr>
+            </table>
+            <h6><i class="bi bi-memory me-1"></i>RAM</h6>
+            <table class="table table-sm mb-3">
+                <tr><th style="width:35%">Total</th><td>${ram.total_gb != null ? ram.total_gb.toFixed(1) + ' GB' : '—'}</td></tr>
+                <tr><th>Available</th><td>${ram.available_gb != null ? ram.available_gb.toFixed(1) + ' GB' : '—'}</td></tr>
+            </table>
+            <h6><i class="bi bi-gpu-card me-1"></i>GPU</h6>
+            <table class="table table-sm mb-3">
+                <thead><tr><th>Name</th><th>Vendor</th><th>VRAM</th></tr></thead>
+                <tbody>${gpuRows}</tbody>
+            </table>
+            <h6><i class="bi bi-laptop me-1"></i>Operating System</h6>
+            <p class="mb-0">${escapeHtml(os)}</p>`;
         }
 
         function addMessage(role, content, usage = null) {

@@ -1,88 +1,16 @@
-feat: model-agnostic chat history with auto-save and browser UI
+feat: chat history, dark mode modals, save config, system info, docs
 
-- Conversations auto-save after every assistant reply (no manual save needed)
-- Auto-save uses upsert — same conversation updates in place, no duplicates
-- New conversation file format: id, title (from first user message), created_at,
-  updated_at, origin_model, origin_endpoint, messages[]
-- Messages are model-agnostic role/content pairs; any model can continue any chat
-- New backend endpoints:
-  - GET  /api/conversations/<id>  — load single conversation
-  - DELETE /api/conversations/<id> — delete single conversation
-  - DELETE /api/conversations      — delete all conversations
-- Updated POST /api/save_conversation — now accepts id (upsert), model, endpoint
-- Updated GET /api/conversations — returns title, origin_model, updated_at sorted newest-first
-- New "Chat History" button in sidebar and collapsed icon strip
-- History modal lists all saved chats: title, origin model, date, message count
-- Load button restores full conversation; current model continues it unchanged
-- Cross-model indicator shown in status bar when loading from a different model
-- Delete individual or delete-all with confirmation dialogs
-- Clear Chat resets currentConversationId so next chat starts as a new save
-
-fix: dark mode styling for all modal windows (Chat History, Setup LLM, Model Help)
-
-- Modal content uses deep blue (#0f172a) background matching Cyber Dark theme
-- Modal header uses darker blue (#0a1628) to visually distinguish it as a new layer
-- Blue border and glow effect (rgba accent) frames modal against dark background
-- Nav tabs styled: inactive=muted slate, hover=subtle highlight, active=accent blue
-- Code blocks use near-black (#020617) with light text and blue border
-- Alerts updated to blue-tinted variants for consistency
-- All text (headings, paragraphs, list items, strong) explicitly set to readable slate tones
-- Close button inverted so it's visible on dark header
-- Modal backdrop uses deep navy (#020617) instead of Bootstrap default grey
-
-fix: dark mode placeholder text too dim in chat input and sidebar fields
-
-- #chatInput::placeholder set to #94a3b8 (slate-400) — clearly readable on dark bg
-- Sidebar form-control/select placeholders set to #64748b (slate-500)
-- opacity: 1 prevents browsers from applying additional dimming on top
-
-feat: Save Configuration button persists all settings explicitly
-
-- New "Save Configuration" button at top of sidebar actions and collapsed icon strip
-- Saves endpoint, model, temperature, theme, system prompt immediately (no debounce)
-- Button transitions: idle → "Saving..." → "Saved!" (green) or "Failed" (red) then resets
-- Refactored collectSettings() helper shared by both auto-save and explicit save
-- Added icon-primary hover style to collapsed icon strip for consistency
-
-fix: update macOS and Windows installers to current state
-
-- Replaced hardcoded dolphin-mistral default with llama3.2 (~2 GB) throughout
-- Model install step now interactive: shows existing models, lets user choose any
-  model by name, or offers llama3.2 if nothing is installed
-- Removed "recommended for uncensored responses" messaging
-- macOS: install update-models.sh to /usr/local/bin/ollama-update-models (falls back
-  to ~/.local/bin if /usr/local/bin is not writable without sudo)
-- macOS: final summary shows installed models, update command, and schedule command
-- Windows: final summary notes update-models.sh is available under WSL/Git Bash
-
-docs: add MODELS.md — runtime guide and model selection reference
-
-- Quantization formats explained (F16 → Q2_K) with sizing formula
-- Hardware tier table: CPU-only through multi-GPU and Apple Silicon
-- Ollama deep-dive: how it works, key commands, environment variables,
-  Modelfile customisation, context window tradeoffs
-- LM Studio deep-dive: how it works, GPU layer offloading, comparison vs Ollama
-- Model recommendations for each hardware tier (CPU-only 8GB through 48+ GB VRAM)
-- Model recommendations by use case: general chat, coding, creative writing,
-  summarisation, multilingual, maths/reasoning
-- Notable models at a glance table with creators and Ollama pull names
-- Performance tips: quantization selection, KV cache sizing, CPU thread tuning,
-  temperature guide, GPU monitoring commands
-- README: added MODELS.md reference under Supported Backends, added to project tree
-
-docs: add documentation links to README
-
-- New Documentation section (table) linking INSTALL.md, SETUP.md, MODELS.md
-  with one-line descriptions of each; placed after Features, before Installation
-- Project structure tree: INSTALL.md, SETUP.md, MODELS.md converted to markdown links
-
-docs: update README with all current features
-
-- Added chat history section: auto-save behaviour, loading, cross-model continuation,
-  deletion, and conversation file format
-- Added sidebar section: collapsible strip, full button reference table
-- Added token usage section: duration, tokens, tok/s, model name
-- Added update-models.sh usage to Updating Ollama Models section
-- Expanded API reference with all conversation endpoints (load, delete, delete-all)
-- Added missing troubleshooting entry for conversation history after Clear Chat
-- Added update-models.sh to project structure tree
+- Add chat history browser: auto-save after every reply, load/delete individual or all conversations
+- Model-agnostic history: conversations stored with origin_model metadata; any model can continue any chat
+- Upsert save pattern: client tracks currentConversationId to update rather than duplicate
+- Fix dark mode modals (Chat History, Setup LLM): deep blue backgrounds matching theme
+- Fix placeholder text readability in dark mode (lighter grey, opacity:1)
+- Add Save Configuration button: explicitly saves all GUI settings with visual confirmation
+- Add System Info feature: /api/system_info endpoint detects CPU, RAM, GPU/VRAM; UI modal shows hardware tier recommendation
+- Add _get_cpu_name(), _get_ram_info(), _get_gpu_info(), _get_system_info() backend methods
+- GPU detection: nvidia-smi → rocm-smi → system_profiler (macOS) → lspci fallback
+- Remove duplicate local imports of platform/subprocess from method bodies
+- Update install-macos.sh: interactive model selection, llama3.2 default, update-models.sh install step
+- Update install-windows.ps1: same model selection improvements, remove dolphin-mistral default
+- Add MODELS.md: quantization guide, hardware tiers, Ollama/LM Studio deep-dive, model recommendations
+- Update README.md: documentation table, chat history section, sidebar reference, token usage, API table, MODELS.md link
