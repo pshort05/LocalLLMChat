@@ -1,16 +1,18 @@
-feat: chat history, dark mode modals, save config, system info, docs
+fix: status panel model display and systemd service home dir
 
-- Add chat history browser: auto-save after every reply, load/delete individual or all conversations
-- Model-agnostic history: conversations stored with origin_model metadata; any model can continue any chat
-- Upsert save pattern: client tracks currentConversationId to update rather than duplicate
-- Fix dark mode modals (Chat History, Setup LLM): deep blue backgrounds matching theme
-- Fix placeholder text readability in dark mode (lighter grey, opacity:1)
-- Add Save Configuration button: explicitly saves all GUI settings with visual confirmation
-- Add System Info feature: /api/system_info endpoint detects CPU, RAM, GPU/VRAM; UI modal shows hardware tier recommendation
-- Add _get_cpu_name(), _get_ram_info(), _get_gpu_info(), _get_system_info() backend methods
-- GPU detection: nvidia-smi → rocm-smi → system_profiler (macOS) → lspci fallback
-- Remove duplicate local imports of platform/subprocess from method bodies
-- Update install-macos.sh: interactive model selection, llama3.2 default, update-models.sh install step
-- Update install-windows.ps1: same model selection improvements, remove dolphin-mistral default
-- Add MODELS.md: quantization guide, hardware tiers, Ollama/LM Studio deep-dive, model recommendations
-- Update README.md: documentation table, chat history section, sidebar reference, token usage, API table, MODELS.md link
+- updateLLMStatusUI prefers the model input value over server's active_model
+- model text input fires checkLLMStatus on change and updates status label on input
+- modelSelect dropdown updates activeModel label immediately on selection
+- install-service-linux.sh: set Environment=HOME=/var/lib/local-llm-chat in system
+  service unit so the app can create its storage dir when run as the no-home service user
+- install-service-linux.sh: use chown -R so leftover root-owned venv from a previous
+  partial install does not block venv creation
+- install-service-linux.sh: stop and disable conflicting service before installing
+  (user service blocks system install and vice versa via port conflict)
+- install-service-linux.sh: configure Ollama for LAN access via systemd drop-in
+  setting OLLAMA_HOST=0.0.0.0; open port 11434 in firewall; show Ollama API URLs
+  in install summary alongside chat interface URLs
+- loadSettings() now syncs activeModel display when restoring saved model from YAML
+- loadModels() now syncs activeModel display when auto-filling empty model input
+- updateLLMStatusUI() now populates model input from active_model when input is empty,
+  ensuring model input and status panel are always a single source of truth

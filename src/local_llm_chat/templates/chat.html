@@ -1964,7 +1964,10 @@ ollama pull dolphin-mistral</code></pre>
                 const s = await resp.json();
 
                 if (s.endpoint)   document.getElementById('endpoint').value = s.endpoint;
-                if (s.model)      document.getElementById('model').value = s.model;
+                if (s.model) {
+                    document.getElementById('model').value = s.model;
+                    document.getElementById('activeModel').textContent = s.model;
+                }
                 if (s.system_prompt !== undefined)
                     document.getElementById('systemPrompt').value = s.system_prompt;
                 if (s.temperature !== undefined) {
@@ -2011,12 +2014,16 @@ ollama pull dolphin-mistral</code></pre>
                     // Auto-fill model input with first model if empty
                     if (!modelInput.value && data.models.length > 0) {
                         modelInput.value = data.models[0];
+                        document.getElementById('activeModel').textContent = data.models[0];
                     }
 
                     // Remove existing event listener to prevent memory leak
                     // Use a named function so we can properly remove it
                     select.onchange = function() {
                         modelInput.value = this.value;
+                        document.getElementById('activeModel').textContent = this.value;
+                        document.getElementById('activeModel').parentElement.style.display = '';
+                        saveSettings();
                     };
 
                     return true;
@@ -2073,8 +2080,16 @@ ollama pull dolphin-mistral</code></pre>
                 statusText.className = 'badge bg-success';
                 statusIcon.style.color = '#28a745';
 
-                if (status.active_model) {
-                    activeModel.textContent = status.active_model;
+                const modelInput = document.getElementById('model');
+                const selectedModel = modelInput.value.trim();
+                const displayModel = selectedModel || status.active_model;
+                if (displayModel) {
+                    activeModel.textContent = displayModel;
+                    activeModel.parentElement.style.display = '';
+                    // If model input was empty, populate it from Ollama's active model
+                    if (!selectedModel && status.active_model) {
+                        modelInput.value = status.active_model;
+                    }
                 }
                 modelInfo.style.display = 'block';
                 startButton.style.display = 'none';
@@ -2189,7 +2204,12 @@ ollama pull dolphin-mistral</code></pre>
 
             // ── Auto-save settings on change ──────────────────────────────────
             document.getElementById('endpoint').addEventListener('change', saveSettings);
-            document.getElementById('model').addEventListener('change', saveSettings);
+            document.getElementById('model').addEventListener('change', () => { saveSettings(); checkLLMStatus(); });
+            document.getElementById('model').addEventListener('input', () => {
+                const activeModel = document.getElementById('activeModel');
+                const val = document.getElementById('model').value.trim();
+                if (val) { activeModel.textContent = val; activeModel.parentElement.style.display = ''; }
+            });
             document.getElementById('systemPrompt').addEventListener('input', saveSettings);
 
             // Temperature slider

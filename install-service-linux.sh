@@ -22,6 +22,7 @@ APP_NAME="local-llm-chat"
 SERVICE_NAME="local-llm-chat"
 OLLAMA_INSTALL_URL="https://ollama.com/install.sh"
 DEFAULT_PORT=5000
+OLLAMA_PORT=11434
 
 SYSTEM_INSTALL_DIR="/opt/local-llm-chat"
 SYSTEM_SERVICE_USER="local-llm-chat"
@@ -324,6 +325,53 @@ else
     fi
 fi
 
+# ── Configure Ollama for LAN access ───────────────────────────────────────────
+# Set OLLAMA_HOST=0.0.0.0 via a systemd drop-in so the Ollama API is reachable
+# from other machines on the network. A drop-in survives package updates.
+step "Configuring Ollama for LAN access"
+
+OLLAMA_DROPIN_DIR="/etc/systemd/system/ollama.service.d"
+OLLAMA_DROPIN_FILE="${OLLAMA_DROPIN_DIR}/override.conf"
+
+if systemctl list-unit-files ollama.service &>/dev/null 2>&1 | grep -q ollama; then
+    info "Writing ${OLLAMA_DROPIN_FILE}..."
+    sudo mkdir -p "$OLLAMA_DROPIN_DIR"
+    sudo tee "$OLLAMA_DROPIN_FILE" > /dev/null <<EOF
+[Service]
+Environment="OLLAMA_HOST=0.0.0.0"
+EOF
+    sudo systemctl daemon-reload
+    sudo systemctl restart ollama
+    sleep 2
+    if curl -sf "http://localhost:${OLLAMA_PORT}/api/tags" >/dev/null 2>&1; then
+        ok "Ollama is responding on port ${OLLAMA_PORT} (LAN access enabled)"
+    else
+        warn "Ollama may still be starting. Check: curl http://localhost:${OLLAMA_PORT}/api/tags"
+    fi
+else
+    warn "No Ollama systemd unit found — skipping LAN configuration."
+    info "To enable LAN access manually, set OLLAMA_HOST=0.0.0.0 before running ollama serve."
+fi
+
+# ── Stop any conflicting existing service ─────────────────────────────────────
+# When switching between system and user modes, the other service may still be
+# running and holding the port.
+if [ "$INSTALL_MODE" = "system" ]; then
+    if systemctl --user is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
+        step "Stopping existing user service (conflicts with system service)"
+        systemctl --user stop "$SERVICE_NAME" 2>/dev/null || true
+        systemctl --user disable "$SERVICE_NAME" 2>/dev/null || true
+        ok "User service stopped and disabled"
+    fi
+else
+    if systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
+        step "Stopping existing system service (conflicts with user service)"
+        sudo systemctl stop "$SERVICE_NAME" 2>/dev/null || true
+        sudo systemctl disable "$SERVICE_NAME" 2>/dev/null || true
+        ok "System service stopped and disabled"
+    fi
+fi
+
 # ── Install LocalLLMChat ───────────────────────────────────────────────────────
 if [ "$INSTALL_MODE" = "system" ]; then
     INSTALL_DIR="$SYSTEM_INSTALL_DIR"
@@ -339,7 +387,7 @@ step "Installing LocalLLMChat to $INSTALL_DIR"
 if [ "$INSTALL_MODE" = "system" ]; then
     # Create install directory owned by root, writable during install
     sudo mkdir -p "$INSTALL_DIR"
-    sudo chown "$USER":"$USER" "$INSTALL_DIR"
+    sudo chown -R "$USER":"$USER" "$INSTALL_DIR"
 else
     mkdir -p "$INSTALL_DIR"
 fi
@@ -420,6 +468,7 @@ Type=simple
 User=${SYSTEM_SERVICE_USER}
 Group=${SYSTEM_SERVICE_USER}
 WorkingDirectory=${INSTALL_DIR}
+Environment=HOME=/var/lib/local-llm-chat
 ExecStart=${EXECUTABLE} --host 0.0.0.0 --port ${DEFAULT_PORT} --foreground
 Restart=always
 RestartSec=5
@@ -513,6 +562,7 @@ fi
 # ── Firewall ───────────────────────────────────────────────────────────────────
 step "Opening firewall for network access"
 open_firewall_port "$DEFAULT_PORT" "LocalLLMChat (port ${DEFAULT_PORT})"
+open_firewall_port "$OLLAMA_PORT"  "Ollama API (port ${OLLAMA_PORT})"
 
 # ── Verify HTTP ────────────────────────────────────────────────────────────────
 step "Verifying web interface"
@@ -537,11 +587,15 @@ hr
 echo -e "${BOLD}${GREEN}  Installation complete!${NC}"
 hr
 echo
-echo -e "  ${BOLD}Access URLs:${NC}"
+echo -e "  ${BOLD}Chat interface:${NC}"
 echo -e "    This machine:   ${CYAN}http://localhost:${DEFAULT_PORT}${NC}"
 echo -e "    Local network:  ${CYAN}http://${LOCAL_IP}:${DEFAULT_PORT}${NC}"
 echo
-echo -e "  ${YELLOW}Share the local network URL with other devices on your network.${NC}"
+echo -e "  ${BOLD}Ollama API:${NC}"
+echo -e "    This machine:   ${CYAN}http://localhost:${OLLAMA_PORT}${NC}"
+echo -e "    Local network:  ${CYAN}http://${LOCAL_IP}:${OLLAMA_PORT}${NC}"
+echo
+echo -e "  ${YELLOW}Share the local network URLs with other devices on your network.${NC}"
 echo
 echo -e "  ${BOLD}Service management:${NC}"
 if [ "$INSTALL_MODE" = "system" ]; then
