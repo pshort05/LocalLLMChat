@@ -1,18 +1,21 @@
-fix: status panel model display and systemd service home dir
+feat: "Engine Room" UI redesign + Prometheus metrics endpoint
 
-- updateLLMStatusUI prefers the model input value over server's active_model
-- model text input fires checkLLMStatus on change and updates status label on input
-- modelSelect dropdown updates activeModel label immediately on selection
-- install-service-linux.sh: set Environment=HOME=/var/lib/local-llm-chat in system
-  service unit so the app can create its storage dir when run as the no-home service user
-- install-service-linux.sh: use chown -R so leftover root-owned venv from a previous
-  partial install does not block venv creation
-- install-service-linux.sh: stop and disable conflicting service before installing
-  (user service blocks system install and vice versa via port conflict)
-- install-service-linux.sh: configure Ollama for LAN access via systemd drop-in
-  setting OLLAMA_HOST=0.0.0.0; open port 11434 in firewall; show Ollama API URLs
-  in install summary alongside chat interface URLs
-- loadSettings() now syncs activeModel display when restoring saved model from YAML
-- loadModels() now syncs activeModel display when auto-filling empty model input
-- updateLLMStatusUI() now populates model input from active_model when input is empty,
-  ensuring model input and status panel are always a single source of truth
+- Redesign chat.html with a distinctive industrial control-panel aesthetic:
+  phosphor-green-on-charcoal dark theme (default), warm paper light theme
+- New typography: IBM Plex Mono for UI chrome, labels, and user messages;
+  Spectral serif for assistant prose replies
+- LED status glow with breathe animation, blinking block cursor in status
+  line, CRT scanline overlay (dark theme only), gradient temperature fader
+- Restyle all modals, tabs, tables, alerts, badges, and history list with
+  CSS variables so both themes are fully covered (replaces hardcoded dark
+  modal overrides)
+- Fix sidebar layout: .sidebar-full-content is now a flex column so section
+  spacing and the actions' margin-top:auto actually apply
+- Fix message entry animation so messages are never stuck invisible
+  (removed opacity:0 default); copy button now appears on hover
+- Move per-reply stats readout below the reply content instead of above
+- Fix code blocks inside modal pres inheriting inline-code chip styling
+- Style Firefox scrollbars (scrollbar-width/scrollbar-color)
+- Add /metrics endpoint exposing Prometheus gauges for Ollama (up state,
+  loaded model count, model size and VRAM per model)
+- Add prometheus_client dependency to pyproject.toml and requirements.txt

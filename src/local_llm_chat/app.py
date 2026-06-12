@@ -32,12 +32,18 @@ from flask import (
     send_from_directory,
 )
 import requests
+from prometheus_client import Gauge, generate_latest, CONTENT_TYPE_LATEST
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+_ollama_up = Gauge("ollama_up", "1 if Ollama API is reachable, 0 otherwise")
+_ollama_models_loaded = Gauge("ollama_models_loaded", "Number of models currently loaded in Ollama")
+_ollama_model_size_bytes = Gauge("ollama_model_size_bytes", "Size of loaded Ollama model in bytes", ["model"])
+_ollama_model_vram_bytes = Gauge("ollama_model_vram_bytes", "VRAM used by loaded Ollama model in bytes", ["model"])
 
 
 class LocalLLMChat:
@@ -436,6 +442,30 @@ class LocalLLMChat:
             except Exception as e:
                 logger.error(f"Error during shutdown: {e}")
                 return jsonify({"error": f"Shutdown failed: {str(e)}"}), 500
+
+        @self.app.route("/metrics")
+        def metrics():
+            """Expose Prometheus metrics for the Ollama service."""
+            endpoint = self._load_settings().get("endpoint", "http://localhost:11434")
+            try:
+                response = requests.get(f"{endpoint}/api/ps", timeout=5)
+                if response.status_code == 200:
+                    loaded = response.json().get("models", [])
+                    _ollama_up.set(1)
+                    _ollama_models_loaded.set(len(loaded))
+                    _ollama_model_size_bytes.clear()
+                    _ollama_model_vram_bytes.clear()
+                    for m in loaded:
+                        name = m.get("name", "unknown")
+                        _ollama_model_size_bytes.labels(model=name).set(m.get("size", 0))
+                        _ollama_model_vram_bytes.labels(model=name).set(m.get("size_vram", 0))
+                else:
+                    _ollama_up.set(0)
+                    _ollama_models_loaded.set(0)
+            except Exception:
+                _ollama_up.set(0)
+                _ollama_models_loaded.set(0)
+            return generate_latest(), 200, {"Content-Type": CONTENT_TYPE_LATEST}
 
     def _call_local_llm(
         self,
